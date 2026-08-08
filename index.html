@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作管理後台 · 資訊專員</title>
+<style>
+  :root{
+    --bg:#0f172a; --bg2:#1e293b; --card:#ffffff; --line:#e2e8f0;
+    --ink:#0f172a; --sub:#64748b; --muted:#94a3b8;
+    --brand:#0d9488; --brand-d:#0f766e; --brand-l:#ccfbf1;
+    --blue:#2563eb; --amber:#d97706; --amber-l:#fef3c7;
+    --red:#dc2626; --red-l:#fee2e2; --green:#16a34a; --green-l:#dcfce7;
+    --radius:14px; --shadow:0 1px 3px rgba(0,0,0,.08),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+    background:#f1f5f9;color:var(--ink);font-size:15px;line-height:1.5}
+  button{font-family:inherit;cursor:pointer;border:0;background:none}
+  input,select,textarea{font-family:inherit;font-size:15px}
+
+  /* ---------- Login ---------- */
+  #login{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#134e4a);
+    display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .login-card{background:#fff;border-radius:18px;padding:34px 30px;width:100%;max-width:360px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center}
+  .login-card h1{margin:0 0 6px;font-size:22px}
+  .login-card p{margin:0 0 22px;color:var(--sub);font-size:14px}
+  .login-card input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;
+    text-align:center;letter-spacing:2px;margin-bottom:14px}
+  .login-card input:focus{outline:none;border-color:var(--brand)}
+  .login-card button{width:100%;padding:13px;background:var(--brand);color:#fff;border-radius:10px;
+    font-size:16px;font-weight:600}
+  .login-err{color:var(--red);font-size:13px;min-height:18px;margin-top:4px}
+
+  /* ---------- Header ---------- */
+  header{background:var(--bg);color:#fff;position:sticky;top:0;z-index:40;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+  .hbar{display:flex;align-items:center;gap:12px;padding:12px 18px;max-width:1200px;margin:0 auto}
+  .hbar .logo{font-size:19px;font-weight:700;white-space:nowrap}
+  .hbar .logo span{color:var(--brand-l)}
+  .hbar .sp{flex:1}
+  .hbar .who{color:var(--muted);font-size:13px}
+  .hbar .out{color:#cbd5e1;font-size:13px;padding:6px 10px;border:1px solid #334155;border-radius:8px}
+  .hbar .out:hover{background:#334155}
+  nav{display:flex;gap:4px;padding:0 12px;max-width:1200px;margin:0 auto;overflow-x:auto}
+  nav button{color:#94a3b8;padding:12px 16px;font-size:15px;font-weight:600;white-space:nowrap;
+    border-bottom:3px solid transparent}
+  nav button .badge{background:#334155;color:#cbd5e1;border-radius:20px;font-size:11px;padding:1px 7px;margin-left:6px}
+  nav button.active{color:#fff;border-bottom-color:var(--brand)}
+  nav button.active .badge{background:var(--brand);color:#fff}
+
+  /* ---------- Layout ---------- */
+  main{max-width:1200px;margin:0 auto;padding:20px 18px 80px}
+  .view{display:none}.view.active{display:block}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+  .toolbar h2{margin:0;font-size:19px;flex-shrink:0}
+  .toolbar .desc{color:var(--sub);font-size:13px;width:100%;margin:-6px 0 4px}
+  .grow{flex:1}
+  .btn{padding:9px 15px;background:var(--brand);color:#fff;border-radius:9px;font-weight:600;font-size:14px;
+    display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:var(--brand-d)}
+  .btn.sm{padding:6px 11px;font-size:13px}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:#f8fafc}
+  select.filter,input.search{padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+  input.search{min-width:180px}
+  .chips{display:flex;gap:6px}
+  .chip{padding:7px 13px;border:1px solid var(--line);border-radius:20px;background:#fff;font-size:13px;color:var(--sub);font-weight:600}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+  /* ---------- Table card ---------- */
+  .tablewrap{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:640px}
+  th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle;font-size:14px}
+  th{background:#f8fafc;color:var(--sub);font-size:12px;font-weight:700;letter-spacing:.4px;white-space:nowrap;position:sticky;top:0}
+  tr:last-child td{border-bottom:0}
+  tr.done{background:#fafffb}
+  tr.done td.maincol{color:var(--muted);text-decoration:line-through}
+  td.act{white-space:nowrap;text-align:right}
+  .iconbtn{padding:5px 9px;border-radius:7px;font-size:13px;color:var(--sub)}
+  .iconbtn:hover{background:#f1f5f9;color:var(--ink)}
+  .iconbtn.del:hover{background:var(--red-l);color:var(--red)}
+  .empty{padding:50px 20px;text-align:center;color:var(--muted)}
+  .empty .big{font-size:40px;margin-bottom:8px}
+
+  /* status pill toggles */
+  .pill{border-radius:20px;padding:5px 12px;font-size:13px;font-weight:600;white-space:nowrap}
+  .pill.no{background:var(--amber-l);color:var(--amber)}
+  .pill.yes{background:var(--green-l);color:var(--green)}
+  .pill:hover{filter:brightness(.96)}
+  .tag{display:inline-block;background:#f1f5f9;color:var(--sub);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+  .tag.warn{background:var(--amber-l);color:var(--amber)}
+  .qty{font-variant-numeric:tabular-nums;font-weight:600}
+
+  /* summary strip */
+  .summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .stat{background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:12px 18px;min-width:110px}
+  .stat .n{font-size:24px;font-weight:700}
+  .stat .l{font-size:12px;color:var(--sub);margin-top:2px}
+  .stat.a .n{color:var(--brand)} .stat.b .n{color:var(--amber)} .stat.c .n{color:var(--green)}
+
+  /* ---------- Modal ---------- */
+  #modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;
+    justify-content:center;z-index:60;padding:30px 16px;overflow-y:auto}
+  #modal.on{display:flex}
+  .mcard{background:#fff;border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .mhead{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+  .mhead h3{margin:0;font-size:18px}
+  .mhead .x{margin-left:auto;font-size:22px;color:var(--muted);padding:0 6px}
+  .mbody{padding:20px 22px;display:grid;gap:14px}
+  .fld,.col{display:flex;flex-direction:column;gap:5px}
+  .fld.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mbody label{font-size:13px;font-weight:600;color:var(--sub)}
+  .mbody input,.mbody select,.mbody textarea{padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;width:100%}
+  .mbody input:focus,.mbody select:focus,.mbody textarea:focus{outline:none;border-color:var(--brand)}
+  .mbody textarea{resize:vertical;min-height:60px}
+  .mfoot{padding:16px 22px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+    background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:90;
+    opacity:0;transition:.3s;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .loading{text-align:center;padding:50px;color:var(--muted)}
+
+  @media(max-width:640px){
+    .hbar .who{display:none}
+    .toolbar h2{width:100%}
+    main{padding:16px 12px 80px}
+    .fld.row2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Login ===== -->
+<div id="login">
+  <div class="login-card">
+    <h1>🗂️ 工作管理後台</h1>
+    <p>彰化轉運中心 · 資訊專員</p>
+    <input id="pw" type="password" placeholder="請輸入通行碼" autocomplete="off">
+    <button onclick="doLogin()">進入</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ===== App ===== -->
+<div id="app" style="display:none">
+  <header>
+    <div class="hbar">
+      <div class="logo">🗂️ 工作管理<span>後台</span></div>
+      <div class="sp"></div>
+      <div class="who" id="who">已登入</div>
+      <button class="out" onclick="logout()">登出</button>
+    </div>
+    <nav id="nav">
+      <button data-tab="tasks" class="active" onclick="go('tasks')">📌 主管交代 <span class="badge" id="bTasks">0</span></button>
+      <button data-tab="orders" onclick="go('orders')">📦 訂貨追蹤 <span class="badge" id="bOrders">0</span></button>
+      <button data-tab="uniforms" onclick="go('uniforms')">👕 制服申請 <span class="badge" id="bUniforms">0</span></button>
+      <button data-tab="assets" onclick="go('assets')">🏷️ 資材保管 <span class="badge" id="bAssets">0</span></button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ===== 1. 主管交代 ===== -->
+    <section class="view active" id="v-tasks">
+      <div class="toolbar">
+        <h2>📌 主管交代事項</h2>
+        <div class="desc">記錄誰、哪天交代、要處理什麼；點狀態即可切換已處理／未處理。</div>
+        <div class="chips" id="fltTasks">
+          <button class="chip on" data-f="pending">待處理</button>
+          <button class="chip" data-f="all">全部</button>
+          <button class="chip" data-f="done">已處理</button>
+        </div>
+        <div class="grow"></div>
+        <button class="btn" onclick="openForm('tasks')">＋ 新增交代</button>
+      </div>
+      <div class="summary" id="sumTasks"></div>
+      <div class="tablewrap"><div class="scroll"><table id="tbTasks"></table></div></div>
+    </section>
+
+    <!-- ===== 2. 訂貨追蹤 ===== -->
+    <section class="view" id="v-orders">
+      <div class="toolbar">
+        <h2>📦 訂貨追蹤</h2>
+        <div class="desc">輸入訂的貨與日期，逐月追蹤；點狀態切換已到貨／未到貨。</div>
+        <select class="filter" id="monOrders" onchange="render('orders')"></select>
+        <div class="chips" id="fltOrders">
+          <button class="chip on" data-f="all">全部</button>
+          <button class="chip" data-f="pending">未到貨</button>
+          <button class="chip" data-f="done">已到貨</button>
+        </div>
+        <div class="grow"></div>
+        <button class="btn" onclick="openForm('orders')">＋ 新增訂貨</button>
+      </div>
+      <div class="summary" id="sumOrders"></div>
+      <div class="tablewrap"><div class="scroll"><table id="tbOrders"></table></div></div>
+    </section>
+
+    <!-- ===== 3. 制服申請 ===== -->
+    <section class="view" id="v-uniforms">
+      <div class="toolbar">
+        <h2>👕 員工制服申請</h2>
+        <div class="desc">員工申請換制服／褲子，記錄尺寸與件數，逐月追蹤到貨。</div>
+        <select class="filter" id="monUniforms" onchange="render('uniforms')"></select>
+        <div class="chips" id="fltUniforms">
+          <button class="chip on" data-f="all">全部</button>
+          <button class="chip" data-f="pending">未到貨</button>
+          <button class="chip" data-f="done">已到貨</button>
+        </div>
+        <div class="grow"></div>
+        <button class="btn" onclick="openForm('uniforms')">＋ 新增申請</button>
+      </div>
+      <div class="summary" id="sumUniforms"></div>
+      <div class="tablewrap"><div class="scroll"><table id="tbUniforms"></table></div></div>
+    </section>
+
+    <!-- ===== 4. 資材保管 ===== -->
+    <section class="view" id="v-assets">
+      <div class="toolbar">
+        <h2>🏷️ 各單位資材保管</h2>
+        <div class="desc">記錄各單位擁有的資材（機號／資產編號）與保管人。</div>
+        <select class="filter" id="unitAssets" onchange="render('assets')"></select>
+        <input class="search" id="qAssets" placeholder="🔍 搜尋 機號/資產編號/保管人" oninput="render('assets')">
+        <div class="grow"></div>
+        <button class="btn" onclick="openForm('assets')">＋ 新增資材</button>
+      </div>
+      <div class="summary" id="sumAssets"></div>
+      <div class="tablewrap"><div class="scroll"><table id="tbAssets"></table></div></div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== Modal ===== -->
+<div id="modal">
+  <div class="mcard">
+    <div class="mhead"><h3 id="mTitle">新增</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="mbody" id="mBody"></div>
+    <div class="mfoot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn" id="mSave" onclick="saveForm()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============ 設定 ============ */
+const SUPABASE_URL = "https://hmqnlovyzlvvnkqmfwtt.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtcW5sb3Z5emx2dm5rcW1md3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjgxMTAsImV4cCI6MjEwMDU0NDExMH0.epqZ-DZsthezuTjfFGEhosR3hU3v8FgR4w0xnYOHN6s";
+const PASSCODE = "8036";          // ← 通行碼，可自行修改
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ============ 資料模型 ============ */
+const DATA = {tasks:[], orders:[], uniforms:[], assets:[]};
+const FILTER = {tasks:'pending', orders:'all', uniforms:'all'};
+
+/* 各模組欄位定義（給表單用） */
+const SCHEMA = {
+  tasks:{ table:'mgr_tasks', title:'主管交代', order:['assign_date','asc'], fields:[
+    {k:'assigned_by',l:'交代人',t:'text',req:true,ph:'例：陳尚福'},
+    {k:'assign_date',l:'交代日期',t:'date',req:true,def:'today'},
+    {k:'content',l:'要處理的事',t:'textarea',req:true,ph:'交代內容'},
+    {k:'notes',l:'備註',t:'text'},
+  ]},
+  orders:{ table:'mgr_orders', title:'訂貨', order:['order_date','desc'], fields:[
+    {k:'order_date',l:'訂貨日期',t:'date',req:true,def:'today'},
+    {k:'item',l:'品名',t:'text',req:true,ph:'例：熱感應紙'},
+    {k:'quantity',l:'數量',t:'number',row2:true},
+    {k:'supplier',l:'廠商',t:'text',row2:true},
+    {k:'notes',l:'備註',t:'text'},
+  ]},
+  uniforms:{ table:'mgr_uniforms', title:'制服申請', order:['apply_date','desc'], fields:[
+    {k:'apply_date',l:'申請日期',t:'date',req:true,def:'today'},
+    {k:'employee',l:'員工姓名',t:'text',req:true},
+    {k:'item_type',l:'品項',t:'select',opts:['制服上衣','工作褲','外套','背心','其他'],req:true},
+    {k:'size',l:'尺寸',t:'select',opts:['XS','S','M','L','XL','2XL','3XL','4XL','其他'],row2:true},
+    {k:'quantity',l:'件數',t:'number',def:1,row2:true},
+    {k:'notes',l:'備註',t:'text'},
+  ]},
+  assets:{ table:'mgr_assets', title:'資材', order:['unit','asc'], fields:[
+    {k:'unit',l:'使用單位',t:'text',ph:'例：彰化發送'},
+    {k:'category',l:'資材類別',t:'text',ph:'例：7.6代 PDT'},
+    {k:'machine_no',l:'機號',t:'text',row2:true},
+    {k:'asset_no',l:'資產編號',t:'text',row2:true},
+    {k:'department',l:'目前使用部門',t:'text',ph:'例：8036 彰化轉運'},
+    {k:'keeper',l:'保管人',t:'text'},
+    {k:'notes',l:'備註',t:'text'},
+  ]},
+};
+
+/* ============ 登入 ============ */
+function doLogin(){
+  const v = document.getElementById('pw').value.trim();
+  if(v === PASSCODE){
+    sessionStorage.setItem('mgr_auth','1');
+    showApp();
+  }else{
+    document.getElementById('loginErr').textContent = '通行碼錯誤';
+  }
+}
+document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function logout(){ sessionStorage.removeItem('mgr_auth'); location.reload(); }
+function showApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('who').textContent = '線上同步中 ✓';
+  loadAll();
+}
+if(sessionStorage.getItem('mgr_auth')==='1') showApp();
+
+/* ============ 讀取 ============ */
+async function loadAll(){ await Promise.all([load('tasks'),load('orders'),load('uniforms'),load('assets')]); }
+async function load(m){
+  const {table,order} = SCHEMA[m];
+  const {data,error} = await sb.from(table).select('*').order(order[0],{ascending:order[1]==='asc'});
+  if(error){ toast('讀取失敗：'+error.message); return; }
+  DATA[m] = data||[];
+  if(m==='orders')   fillMonths('monOrders','order_date','orders');
+  if(m==='uniforms') fillMonths('monUniforms','apply_date','uniforms');
+  if(m==='assets')   fillUnits();
+  render(m); updateBadges();
+}
+function updateBadges(){
+  document.getElementById('bTasks').textContent    = DATA.tasks.filter(r=>!r.done).length;
+  document.getElementById('bOrders').textContent   = DATA.orders.filter(r=>!r.arrived).length;
+  document.getElementById('bUniforms').textContent = DATA.uniforms.filter(r=>!r.arrived).length;
+  document.getElementById('bAssets').textContent   = DATA.assets.length;
+}
+
+/* ============ 導覽 ============ */
+function go(tab){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+tab).classList.add('active');
+}
+
+/* 篩選 chips */
+document.querySelectorAll('.chips').forEach(box=>{
+  box.addEventListener('click',e=>{
+    const b=e.target.closest('.chip'); if(!b)return;
+    const m = box.id.replace('flt','').toLowerCase();
+    FILTER[m]=b.dataset.f;
+    box.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===b));
+    render(m);
+  });
+});
+
+/* 月份 / 單位下拉 */
+function fillMonths(selId,dateKey,m){
+  const sel=document.getElementById(selId);
+  const months=[...new Set(DATA[m].map(r=>(r[dateKey]||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  const cur=sel.value;
+  sel.innerHTML='<option value="all">全部月份</option>'+months.map(x=>`<option value="${x}">${x.replace('-','年')}月</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+function fillUnits(){
+  const sel=document.getElementById('unitAssets');
+  const units=[...new Set(DATA.assets.map(r=>r.unit).filter(Boolean))].sort();
+  const cur=sel.value;
+  sel.innerHTML='<option value="all">全部單位</option>'+units.map(u=>`<option value="${u}">${u}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+
+/* ============ 顯示 ============ */
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtDate=d=>d?d.slice(5).replace('-','/'):'';
+function statPill(done,doneTxt,noTxt){
+  return done?`<span class="pill yes">✓ ${doneTxt}</span>`:`<span class="pill no">${noTxt}</span>`;
+}
+function emptyRow(cols,msg){return `<tr><td colspan="${cols}"><div class="empty"><div class="big">🗒️</div>${msg}</div></td></tr>`;}
+
+function render(m){ ({tasks:renderTasks,orders:renderOrders,uniforms:renderUniforms,assets:renderAssets}[m])(); }
+
+function renderTasks(){
+  let rows=DATA.tasks.slice();
+  const f=FILTER.tasks;
+  if(f==='pending')rows=rows.filter(r=>!r.done);
+  if(f==='done')rows=rows.filter(r=>r.done);
+  const t=document.getElementById('tbTasks');
+  const total=DATA.tasks.length,pend=DATA.tasks.filter(r=>!r.done).length;
+  document.getElementById('sumTasks').innerHTML=
+    `<div class="stat b"><div class="n">${pend}</div><div class="l">待處理</div></div>
+     <div class="stat c"><div class="n">${total-pend}</div><div class="l">已處理</div></div>
+     <div class="stat a"><div class="n">${total}</div><div class="l">總計</div></div>`;
+  t.innerHTML=`<thead><tr><th>交代日期</th><th>交代人</th><th>要處理的事</th><th>狀態</th><th>備註</th><th></th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>`<tr class="${r.done?'done':''}">
+      <td>${esc(fmtDate(r.assign_date))}</td>
+      <td>${esc(r.assigned_by)}</td>
+      <td class="maincol">${esc(r.content)}</td>
+      <td><button class="pill ${r.done?'yes':'no'}" onclick="toggle('tasks','${r.id}','done',${!r.done})">${r.done?'✓ 已處理':'待處理'}</button></td>
+      <td>${esc(r.notes)||'<span style=color:#cbd5e1>—</span>'}</td>
+      <td class="act"><button class="iconbtn" onclick="openForm('tasks','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('tasks','${r.id}')">🗑️</button></td>
+    </tr>`).join(''):emptyRow(6,'目前沒有資料'))+`</tbody>`;
+}
+
+function renderOrders(){
+  let rows=DATA.orders.slice();
+  const mon=document.getElementById('monOrders').value, f=FILTER.orders;
+  if(mon&&mon!=='all')rows=rows.filter(r=>(r.order_date||'').slice(0,7)===mon);
+  if(f==='pending')rows=rows.filter(r=>!r.arrived);
+  if(f==='done')rows=rows.filter(r=>r.arrived);
+  const base=(mon&&mon!=='all')?DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===mon):DATA.orders;
+  const pend=base.filter(r=>!r.arrived).length;
+  document.getElementById('sumOrders').innerHTML=
+    `<div class="stat b"><div class="n">${pend}</div><div class="l">未到貨</div></div>
+     <div class="stat c"><div class="n">${base.length-pend}</div><div class="l">已到貨</div></div>
+     <div class="stat a"><div class="n">${base.length}</div><div class="l">${(mon&&mon!=='all')?'本月筆數':'總筆數'}</div></div>`;
+  const t=document.getElementById('tbOrders');
+  t.innerHTML=`<thead><tr><th>訂貨日期</th><th>品名</th><th>數量</th><th>廠商</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>`<tr class="${r.arrived?'done':''}">
+      <td>${esc(fmtDate(r.order_date))}</td>
+      <td class="maincol">${esc(r.item)}</td>
+      <td class="qty">${r.quantity!=null?esc(r.quantity):'—'}</td>
+      <td>${esc(r.supplier)||'—'}</td>
+      <td><button class="pill ${r.arrived?'yes':'no'}" onclick="toggle('orders','${r.id}','arrived',${!r.arrived})">${r.arrived?'✓ 已到貨':'未到貨'}</button></td>
+      <td>${esc(r.notes)||'<span style=color:#cbd5e1>—</span>'}</td>
+      <td class="act"><button class="iconbtn" onclick="openForm('orders','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('orders','${r.id}')">🗑️</button></td>
+    </tr>`).join(''):emptyRow(7,'這個月還沒有訂貨紀錄'))+`</tbody>`;
+}
+
+function renderUniforms(){
+  let rows=DATA.uniforms.slice();
+  const mon=document.getElementById('monUniforms').value, f=FILTER.uniforms;
+  if(mon&&mon!=='all')rows=rows.filter(r=>(r.apply_date||'').slice(0,7)===mon);
+  if(f==='pending')rows=rows.filter(r=>!r.arrived);
+  if(f==='done')rows=rows.filter(r=>r.arrived);
+  const base=(mon&&mon!=='all')?DATA.uniforms.filter(r=>(r.apply_date||'').slice(0,7)===mon):DATA.uniforms;
+  const pend=base.filter(r=>!r.arrived).length;
+  const pcs=base.reduce((s,r)=>s+(Number(r.quantity)||0),0);
+  document.getElementById('sumUniforms').innerHTML=
+    `<div class="stat b"><div class="n">${pend}</div><div class="l">未到貨筆</div></div>
+     <div class="stat c"><div class="n">${base.length-pend}</div><div class="l">已到貨筆</div></div>
+     <div class="stat a"><div class="n">${pcs}</div><div class="l">總件數</div></div>`;
+  const t=document.getElementById('tbUniforms');
+  t.innerHTML=`<thead><tr><th>申請日期</th><th>員工</th><th>品項</th><th>尺寸</th><th>件數</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>`<tr class="${r.arrived?'done':''}">
+      <td>${esc(fmtDate(r.apply_date))}</td>
+      <td class="maincol">${esc(r.employee)}</td>
+      <td>${esc(r.item_type)}</td>
+      <td><span class="tag">${esc(r.size)||'—'}</span></td>
+      <td class="qty">${esc(r.quantity)}</td>
+      <td><button class="pill ${r.arrived?'yes':'no'}" onclick="toggle('uniforms','${r.id}','arrived',${!r.arrived})">${r.arrived?'✓ 已到貨':'未到貨'}</button></td>
+      <td>${esc(r.notes)||'<span style=color:#cbd5e1>—</span>'}</td>
+      <td class="act"><button class="iconbtn" onclick="openForm('uniforms','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('uniforms','${r.id}')">🗑️</button></td>
+    </tr>`).join(''):emptyRow(8,'這個月還沒有制服申請'))+`</tbody>`;
+}
+
+function renderAssets(){
+  let rows=DATA.assets.slice();
+  const unit=document.getElementById('unitAssets').value;
+  const q=document.getElementById('qAssets').value.trim().toLowerCase();
+  if(unit&&unit!=='all')rows=rows.filter(r=>r.unit===unit);
+  if(q)rows=rows.filter(r=>[r.machine_no,r.asset_no,r.keeper,r.category,r.notes].some(v=>(v||'').toLowerCase().includes(q)));
+  const base=(unit&&unit!=='all')?DATA.assets.filter(r=>r.unit===unit):DATA.assets;
+  const un=base.filter(r=>r.status==='uninspected').length;
+  document.getElementById('sumAssets').innerHTML=
+    `<div class="stat a"><div class="n">${base.length}</div><div class="l">資材總數</div></div>
+     <div class="stat c"><div class="n">${base.filter(r=>r.keeper).length}</div><div class="l">已指定保管</div></div>
+     <div class="stat b"><div class="n">${un}</div><div class="l">未盤點</div></div>`;
+  const t=document.getElementById('tbAssets');
+  t.innerHTML=`<thead><tr><th>使用單位</th><th>類別</th><th>機號</th><th>資產編號</th><th>使用部門</th><th>保管人</th><th>備註</th><th></th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>`<tr>
+      <td><span class="tag">${esc(r.unit)||'—'}</span></td>
+      <td>${esc(r.category)||'—'}</td>
+      <td class="maincol">${esc(r.machine_no)||'—'}</td>
+      <td>${esc(r.asset_no)||'—'}</td>
+      <td>${esc(r.department)||'—'}</td>
+      <td>${r.keeper?esc(r.keeper):'<span style=color:#cbd5e1>未指定</span>'}</td>
+      <td>${r.status==='uninspected'?'<span class="tag warn">未盤點</span> ':''}${esc(r.notes)||''}</td>
+      <td class="act"><button class="iconbtn" onclick="openForm('assets','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('assets','${r.id}')">🗑️</button></td>
+    </tr>`).join(''):emptyRow(8,'沒有符合的資材'))+`</tbody>`;
+}
+
+/* ============ 切換狀態 ============ */
+async function toggle(m,id,field,val){
+  const {error}=await sb.from(SCHEMA[m].table).update({[field]:val}).eq('id',id);
+  if(error){toast('更新失敗：'+error.message);return;}
+  const r=DATA[m].find(x=>x.id===id); if(r)r[field]=val;
+  render(m); updateBadges(); toast(val?'已標記完成 ✓':'已改回未完成');
+}
+
+/* ============ 新增 / 編輯 ============ */
+let editing={m:null,id:null};
+function openForm(m,id=null){
+  editing={m,id};
+  const s=SCHEMA[m];
+  const rec=id?DATA[m].find(r=>r.id===id):{};
+  document.getElementById('mTitle').textContent=(id?'編輯':'新增')+s.title;
+  const today=new Date().toISOString().slice(0,10);
+  const fieldHtml=f=>{
+    let val=rec[f.k]; if(val==null)val=f.def==='today'?today:(f.def!=null?f.def:'');
+    const id2='f_'+f.k;
+    let ctl;
+    if(f.t==='textarea')ctl=`<textarea id="${id2}" placeholder="${f.ph||''}">${esc(val)}</textarea>`;
+    else if(f.t==='select')ctl=`<select id="${id2}">${f.opts.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
+    else ctl=`<input id="${id2}" type="${f.t}" placeholder="${f.ph||''}" value="${esc(val)}">`;
+    const lab=`<label>${f.l}${f.req?' <span style=color:#dc2626>*</span>':''}</label>`;
+    return {inner:lab+ctl};
+  };
+  /* 依序輸出；相鄰兩個 row2 欄位併成一列 */
+  let html='',i=0;
+  while(i<s.fields.length){
+    const f=s.fields[i];
+    if(f.row2 && s.fields[i+1] && s.fields[i+1].row2){
+      html+=`<div class="fld row2"><div class="col">${fieldHtml(f).inner}</div><div class="col">${fieldHtml(s.fields[i+1]).inner}</div></div>`;
+      i+=2;
+    }else{
+      html+=`<div class="fld">${fieldHtml(f).inner}</div>`;
+      i++;
+    }
+  }
+  document.getElementById('mBody').innerHTML=html;
+  document.getElementById('modal').classList.add('on');
+}
+function closeModal(){document.getElementById('modal').classList.remove('on');}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+
+async function saveForm(){
+  const {m,id}=editing; const s=SCHEMA[m]; const obj={};
+  for(const f of s.fields){
+    let v=document.getElementById('f_'+f.k).value;
+    if(f.req&&!String(v).trim()){toast('請填寫「'+f.l+'」');return;}
+    if(f.t==='number')v=v===''?null:Number(v);
+    if(v==='')v=null;
+    obj[f.k]=v;
+  }
+  const btn=document.getElementById('mSave');btn.disabled=true;btn.textContent='儲存中…';
+  let error;
+  if(id){({error}=await sb.from(s.table).update(obj).eq('id',id));}
+  else{({error}=await sb.from(s.table).insert(obj));}
+  btn.disabled=false;btn.textContent='儲存';
+  if(error){toast('儲存失敗：'+error.message);return;}
+  closeModal();await load(m);toast(id?'已更新 ✓':'已新增 ✓');
+}
+
+/* ============ 刪除 ============ */
+async function del(m,id){
+  if(!confirm('確定要刪除這筆資料嗎？'))return;
+  const {error}=await sb.from(SCHEMA[m].table).delete().eq('id',id);
+  if(error){toast('刪除失敗：'+error.message);return;}
+  await load(m);toast('已刪除');
+}
+
+/* ============ Toast ============ */
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2200);
+}
+</script>
+</body>
+</html>
