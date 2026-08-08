@@ -258,6 +258,13 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const DATA = {tasks:[], orders:[], uniforms:[], assets:[]};
 const FILTER = {tasks:'pending', orders:'all', uniforms:'all'};
 
+/* 單位固定排序：發送 → 到著 → 籠車 → 低溫（其餘排最後） */
+const UNIT_SEQ = ['發送','到著','籠車','低溫'];
+const unitRank = u => { const i = UNIT_SEQ.findIndex(k => (u||'').includes(k)); return i<0 ? 99 : i; };
+const byUnitOrder = (a,b) => unitRank(a.unit)-unitRank(b.unit)
+  || String(a.unit||'').localeCompare(String(b.unit||''),'zh-Hant')
+  || String(a.created_at||'').localeCompare(String(b.created_at||''));
+
 /* 各模組欄位定義（給表單用） */
 const SCHEMA = {
   tasks:{ table:'mgr_tasks', title:'主管交代', order:['assign_date','asc'], fields:[
@@ -281,7 +288,7 @@ const SCHEMA = {
     {k:'quantity',l:'件數',t:'number',def:1,row2:true},
     {k:'notes',l:'備註',t:'text'},
   ]},
-  assets:{ table:'mgr_assets', title:'資材', order:['unit','asc'], fields:[
+  assets:{ table:'mgr_assets', title:'資材', order:['created_at','asc'], fields:[
     {k:'unit',l:'使用單位',t:'text',ph:'例：彰化發送'},
     {k:'category',l:'資材類別',t:'text',ph:'例：7.6代 PDT'},
     {k:'machine_no',l:'機號',t:'text',row2:true},
@@ -359,7 +366,8 @@ function fillMonths(selId,dateKey,m){
 }
 function fillUnits(){
   const sel=document.getElementById('unitAssets');
-  const units=[...new Set(DATA.assets.map(r=>r.unit).filter(Boolean))].sort();
+  const units=[...new Set(DATA.assets.map(r=>r.unit).filter(Boolean))]
+    .sort((a,b)=>unitRank(a)-unitRank(b)||a.localeCompare(b,'zh-Hant'));
   const cur=sel.value;
   sel.innerHTML='<option value="all">全部單位</option>'+units.map(u=>`<option value="${u}">${u}</option>`).join('');
   if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
@@ -455,6 +463,7 @@ function renderAssets(){
   const q=document.getElementById('qAssets').value.trim().toLowerCase();
   if(unit&&unit!=='all')rows=rows.filter(r=>r.unit===unit);
   if(q)rows=rows.filter(r=>[r.machine_no,r.asset_no,r.keeper,r.category,r.notes].some(v=>(v||'').toLowerCase().includes(q)));
+  rows.sort(byUnitOrder);
   const base=(unit&&unit!=='all')?DATA.assets.filter(r=>r.unit===unit):DATA.assets;
   const un=base.filter(r=>r.status==='uninspected').length;
   document.getElementById('sumAssets').innerHTML=
