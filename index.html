@@ -332,6 +332,18 @@ const byUnitOrder = (a,b) => unitRank(a.unit)-unitRank(b.unit)
   || String(a.unit||'').localeCompare(String(b.unit||''),'zh-Hant')
   || String(a.created_at||'').localeCompare(String(b.created_at||''));
 
+/* 資材專用排序：單位優先，同單位內 → 陳尚福 → PDT → 有保管人 → 匯入順序 */
+const isChen   = r => (r.keeper||'').includes('陳尚福') ? 0 : 1;
+const isPDT    = r => /PDT/i.test(r.category||'') ? 0 : 1;
+const hasKeeper= r => (r.keeper||'').trim() ? 0 : 1;
+const byAssetOrder = (a,b) =>
+     unitRank(a.unit)-unitRank(b.unit)                                   // 1. 單位固定順序
+  || String(a.unit||'').localeCompare(String(b.unit||''),'zh-Hant')
+  || isChen(a)-isChen(b)                                                 // 2. 陳尚福優先
+  || isPDT(a)-isPDT(b)                                                   // 3. PDT 優先（勝過有無保管人）
+  || hasKeeper(a)-hasKeeper(b)                                           // 4. 有保管人優先
+  || String(a.created_at||'').localeCompare(String(b.created_at||''));   // 5. 匯入順序
+
 /* 各模組欄位定義（給表單用） */
 const SCHEMA = {
   tasks:{ table:'mgr_tasks', title:'交代事項', order:['assign_date','asc'], fields:[
@@ -513,7 +525,7 @@ function renderAssets(){
   const q=document.getElementById('qAssets').value.trim().toLowerCase();
   if(unit&&unit!=='all')rows=rows.filter(r=>r.unit===unit);
   if(q)rows=rows.filter(r=>[r.machine_no,r.asset_no,r.keeper,r.category,r.notes].some(v=>(v||'').toLowerCase().includes(q)));
-  rows.sort(byUnitOrder);
+  rows.sort(byAssetOrder);
   const base=(unit&&unit!=='all')?DATA.assets.filter(r=>r.unit===unit):DATA.assets;
   const un=base.filter(r=>r.status==='uninspected').length;
   document.getElementById('sumAssets').innerHTML=
