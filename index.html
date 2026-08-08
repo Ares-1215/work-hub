@@ -6,17 +6,32 @@
 <title>工作管理後台 · 資訊專員</title>
 <style>
   :root{
-    --bg:#0f172a; --bg2:#1e293b; --card:#ffffff; --line:#e2e8f0;
-    --ink:#0f172a; --sub:#64748b; --muted:#94a3b8;
+    --bg:#0f172a; --card:#ffffff; --card2:#f8fafc; --line:#e2e8f0;
+    --ink:#0f172a; --sub:#64748b; --muted:#94a3b8; --dash:#cbd5e1;
+    --page:#eef2f7; --input:#ffffff; --hover:#f1f5f9;
     --brand:#0d9488; --brand-d:#0f766e; --brand-l:#ccfbf1;
-    --blue:#2563eb; --amber:#d97706; --amber-l:#fef3c7;
+    --amber:#d97706; --amber-l:#fef3c7;
     --red:#dc2626; --red-l:#fee2e2; --green:#16a34a; --green-l:#dcfce7;
-    --radius:14px; --shadow:0 1px 3px rgba(0,0,0,.08),0 8px 24px rgba(15,23,42,.06);
+    --done:#f4fbf7;
+    --radius:14px; --shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(15,23,42,.06);
+    color-scheme:light;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1120; --card:#161f31; --card2:#1c2740; --line:#2a3650;
+    --ink:#e6edf7; --sub:#94a6c0; --muted:#64748b; --dash:#3b475e;
+    --page:#0a101c; --input:#0f1727; --hover:#1c2740;
+    --brand:#2dd4bf; --brand-d:#14b8a6; --brand-l:#5eead4;
+    --amber:#fbbf24; --amber-l:#3a2f12;
+    --red:#f87171; --red-l:#3a1a1a; --green:#4ade80; --green-l:#12301f;
+    --done:#141f19;
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.4);
+    color-scheme:dark;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
   body{font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
-    background:#f1f5f9;color:var(--ink);font-size:15px;line-height:1.5}
+    background:var(--page);color:var(--ink);font-size:15px;line-height:1.5;
+    transition:background .25s,color .25s}
   button{font-family:inherit;cursor:pointer;border:0;background:none}
   input,select,textarea{font-family:inherit;font-size:15px}
 
@@ -35,20 +50,26 @@
   .login-err{color:var(--red);font-size:13px;min-height:18px;margin-top:4px}
 
   /* ---------- Header ---------- */
-  header{background:var(--bg);color:#fff;position:sticky;top:0;z-index:40;box-shadow:0 2px 10px rgba(0,0,0,.15)}
-  .hbar{display:flex;align-items:center;gap:12px;padding:12px 18px;max-width:1200px;margin:0 auto}
+  header{background:var(--bg);color:#fff;position:sticky;top:0;z-index:40;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+  .hbar{display:flex;align-items:center;gap:10px;padding:12px 18px;max-width:1200px;margin:0 auto}
   .hbar .logo{font-size:19px;font-weight:700;white-space:nowrap}
-  .hbar .logo span{color:var(--brand-l)}
+  .hbar .logo span{color:#5eead4}
   .hbar .sp{flex:1}
-  .hbar .who{color:var(--muted);font-size:13px}
-  .hbar .out{color:#cbd5e1;font-size:13px;padding:6px 10px;border:1px solid #334155;border-radius:8px}
-  .hbar .out:hover{background:#334155}
-  nav{display:flex;gap:4px;padding:0 12px;max-width:1200px;margin:0 auto;overflow-x:auto}
-  nav button{color:#94a3b8;padding:12px 16px;font-size:15px;font-weight:600;white-space:nowrap;
-    border-bottom:3px solid transparent}
-  nav button .badge{background:#334155;color:#cbd5e1;border-radius:20px;font-size:11px;padding:1px 7px;margin-left:6px}
+  .hbar .who{color:#8aa0bd;font-size:13px}
+  .hbar .out{color:#cbd5e1;font-size:13px;padding:7px 11px;border:1px solid #334155;border-radius:9px;
+    display:inline-flex;align-items:center;gap:5px;transition:background .15s}
+  .hbar .out:hover{background:#1e293b}
+  .hbar .out.icon{padding:7px 9px;font-size:16px;line-height:1}
+  nav{display:flex;gap:2px;padding:0 12px;max-width:1200px;margin:0 auto;overflow-x:auto;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{display:flex;align-items:center;gap:6px;color:#94a3b8;padding:13px 16px;font-size:15px;
+    font-weight:600;white-space:nowrap;border-bottom:3px solid transparent;transition:color .15s}
+  nav button .ico{font-size:16px;line-height:1}
+  nav button:hover{color:#cbd5e1}
+  nav button .badge{background:#334155;color:#cbd5e1;border-radius:20px;font-size:11px;padding:1px 7px;
+    min-width:20px;text-align:center}
   nav button.active{color:#fff;border-bottom-color:var(--brand)}
-  nav button.active .badge{background:var(--brand);color:#fff}
+  nav button.active .badge{background:var(--brand);color:#04211d}
 
   /* ---------- Layout ---------- */
   main{max-width:1200px;margin:0 auto;padding:20px 18px 80px}
@@ -61,26 +82,27 @@
     display:inline-flex;align-items:center;gap:6px}
   .btn:hover{background:var(--brand-d)}
   .btn.sm{padding:6px 11px;font-size:13px}
-  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-  .btn.ghost:hover{background:#f8fafc}
-  select.filter,input.search{padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+  .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:var(--card2)}
+  select.filter,input.search{padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--input);color:var(--ink)}
   input.search{min-width:180px}
   .chips{display:flex;gap:6px}
-  .chip{padding:7px 13px;border:1px solid var(--line);border-radius:20px;background:#fff;font-size:13px;color:var(--sub);font-weight:600}
+  .chip{padding:7px 13px;border:1px solid var(--line);border-radius:20px;background:var(--card);font-size:13px;color:var(--sub);font-weight:600}
   .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .dash{color:var(--dash)}
 
   /* ---------- Table card ---------- */
   .tablewrap{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
   .scroll{overflow-x:auto}
   table{width:100%;border-collapse:collapse;min-width:640px}
   th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle;font-size:14px}
-  th{background:#f8fafc;color:var(--sub);font-size:12px;font-weight:700;letter-spacing:.4px;white-space:nowrap;position:sticky;top:0}
+  th{background:var(--card2);color:var(--sub);font-size:12px;font-weight:700;letter-spacing:.4px;white-space:nowrap;position:sticky;top:0}
   tr:last-child td{border-bottom:0}
-  tr.done{background:#fafffb}
+  tr.done{background:var(--done)}
   tr.done td.maincol{color:var(--muted);text-decoration:line-through}
   td.act{white-space:nowrap;text-align:right}
   .iconbtn{padding:5px 9px;border-radius:7px;font-size:13px;color:var(--sub)}
-  .iconbtn:hover{background:#f1f5f9;color:var(--ink)}
+  .iconbtn:hover{background:var(--hover);color:var(--ink)}
   .iconbtn.del:hover{background:var(--red-l);color:var(--red)}
   .empty{padding:50px 20px;text-align:center;color:var(--muted)}
   .empty .big{font-size:40px;margin-bottom:8px}
@@ -90,13 +112,13 @@
   .pill.no{background:var(--amber-l);color:var(--amber)}
   .pill.yes{background:var(--green-l);color:var(--green)}
   .pill:hover{filter:brightness(.96)}
-  .tag{display:inline-block;background:#f1f5f9;color:var(--sub);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+  .tag{display:inline-block;background:var(--card2);color:var(--sub);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
   .tag.warn{background:var(--amber-l);color:var(--amber)}
   .qty{font-variant-numeric:tabular-nums;font-weight:600}
 
   /* summary strip */
   .summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-  .stat{background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:12px 18px;min-width:110px}
+  .stat{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:12px 18px;min-width:110px}
   .stat .n{font-size:24px;font-weight:700}
   .stat .l{font-size:12px;color:var(--sub);margin-top:2px}
   .stat.a .n{color:var(--brand)} .stat.b .n{color:var(--amber)} .stat.c .n{color:var(--green)}
@@ -105,7 +127,7 @@
   #modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;
     justify-content:center;z-index:60;padding:30px 16px;overflow-y:auto}
   #modal.on{display:flex}
-  .mcard{background:#fff;border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .mcard{background:var(--card);border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
   .mhead{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center}
   .mhead h3{margin:0;font-size:18px}
   .mhead .x{margin-left:auto;font-size:22px;color:var(--muted);padding:0 6px}
@@ -113,7 +135,7 @@
   .fld,.col{display:flex;flex-direction:column;gap:5px}
   .fld.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .mbody label{font-size:13px;font-weight:600;color:var(--sub)}
-  .mbody input,.mbody select,.mbody textarea{padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;width:100%}
+  .mbody input,.mbody select,.mbody textarea{padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;width:100%;background:var(--input);color:var(--ink)}
   .mbody input:focus,.mbody select:focus,.mbody textarea:focus{outline:none;border-color:var(--brand)}
   .mbody textarea{resize:vertical;min-height:60px}
   .mfoot{padding:16px 22px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
@@ -126,9 +148,63 @@
 
   @media(max-width:640px){
     .hbar .who{display:none}
+    .hbar{padding:11px 14px;gap:8px}
+    .hbar .logo{font-size:17px}
+    main{padding:14px 12px 90px}
+
+    /* 導覽：四等分、圖示在上、文字在下 */
+    nav{gap:0;padding:0}
+    nav button{position:relative;flex:1;flex-direction:column;gap:3px;padding:9px 2px 8px;font-size:11px;justify-content:center}
+    nav button .ico{font-size:21px}
+    nav button .badge{position:absolute;top:4px;left:50%;transform:translateX(3px);padding:0 5px;min-width:17px;font-size:10px;line-height:16px;height:16px}
+
+    /* 工具列 */
+    .toolbar{gap:8px}
     .toolbar h2{width:100%}
-    main{padding:16px 12px 80px}
-    .fld.row2{grid-template-columns:1fr}
+    .toolbar .desc{margin:-4px 0 2px}
+    .grow{display:none}
+    .toolbar .btn{width:100%;justify-content:center;padding:12px}
+    .toolbar select.filter{flex:1 1 auto}
+    .toolbar input.search{flex:1 1 100%;width:100%;min-width:0}
+    .chips{flex:1 1 100%}
+    .chips .chip{flex:1;text-align:center}
+
+    /* 統計：三等分 */
+    .summary{gap:8px}
+    .summary .stat{flex:1;min-width:0;padding:12px 8px;text-align:center}
+    .stat .n{font-size:21px}
+
+    /* 表格 → 卡片 */
+    .tablewrap{background:transparent;box-shadow:none;border-radius:0;overflow:visible}
+    .scroll{overflow:visible}
+    table{min-width:0;width:100%;display:block}
+    thead{display:none}
+    tbody{display:block}
+    tr{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;
+       box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+    tr.done{background:var(--done)}
+    td{display:flex;justify-content:space-between;align-items:center;gap:14px;
+       padding:10px 15px;border-bottom:1px solid var(--line);text-align:right;font-size:14px}
+    tr td:last-child{border-bottom:0}
+    td::before{content:attr(data-label);color:var(--sub);font-size:12px;font-weight:700;
+       text-align:left;flex-shrink:0;white-space:nowrap}
+    /* 主欄位當卡片標題（整行、無標籤） */
+    td.maincol{display:block;text-align:left;font-size:16px;font-weight:700;
+       background:var(--card2);padding:12px 15px}
+    tr.done td.maincol{background:var(--done)}
+    td.maincol::before{display:none}
+    /* 操作列 */
+    td.act{justify-content:flex-end;gap:8px;background:var(--card2)}
+    td.act::before{display:none}
+    td.act .iconbtn{padding:8px 14px;font-size:16px;border:1px solid var(--line)}
+    /* 空狀態 */
+    td[colspan]{display:block;text-align:center}
+    td[colspan]::before{display:none}
+    .empty{padding:36px 16px}
+
+    .fld.row2{grid-template-columns:1fr 1fr}
+    #modal{padding:0;align-items:flex-end}
+    .mcard{max-width:none;border-radius:18px 18px 0 0}
   }
 </style>
 </head>
@@ -152,13 +228,14 @@
       <div class="logo">🗂️ 工作管理<span>後台</span></div>
       <div class="sp"></div>
       <div class="who" id="who">已登入</div>
+      <button class="out icon" id="themeBtn" onclick="toggleTheme()" title="切換深／淺主題">🌙</button>
       <button class="out" onclick="logout()">登出</button>
     </div>
     <nav id="nav">
-      <button data-tab="tasks" class="active" onclick="go('tasks')">📌 主管交代 <span class="badge" id="bTasks">0</span></button>
-      <button data-tab="orders" onclick="go('orders')">📦 訂貨追蹤 <span class="badge" id="bOrders">0</span></button>
-      <button data-tab="uniforms" onclick="go('uniforms')">👕 制服申請 <span class="badge" id="bUniforms">0</span></button>
-      <button data-tab="assets" onclick="go('assets')">🏷️ 資材保管 <span class="badge" id="bAssets">0</span></button>
+      <button data-tab="tasks" class="active" onclick="go('tasks')"><span class="ico">📌</span><span class="lbl">主管交代</span><span class="badge" id="bTasks">0</span></button>
+      <button data-tab="orders" onclick="go('orders')"><span class="ico">📦</span><span class="lbl">訂貨追蹤</span><span class="badge" id="bOrders">0</span></button>
+      <button data-tab="uniforms" onclick="go('uniforms')"><span class="ico">👕</span><span class="lbl">制服申請</span><span class="badge" id="bUniforms">0</span></button>
+      <button data-tab="assets" onclick="go('assets')"><span class="ico">🏷️</span><span class="lbl">資材保管</span><span class="badge" id="bAssets">0</span></button>
     </nav>
   </header>
 
@@ -253,6 +330,23 @@ const SUPABASE_URL = "https://hmqnlovyzlvvnkqmfwtt.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtcW5sb3Z5emx2dm5rcW1md3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjgxMTAsImV4cCI6MjEwMDU0NDExMH0.epqZ-DZsthezuTjfFGEhosR3hU3v8FgR4w0xnYOHN6s";
 const PASSCODE = "8036";          // ← 通行碼，可自行修改
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ============ 深／淺主題 ============ */
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  localStorage.setItem('mgr_theme',t);
+  const b=document.getElementById('themeBtn');
+  if(b){ b.textContent = t==='dark'?'☀️':'🌙'; b.title = t==='dark'?'切換為淺色':'切換為深色'; }
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
+  applyTheme(cur==='dark'?'light':'dark');
+}
+(function initTheme(){
+  const saved=localStorage.getItem('mgr_theme');
+  const sys=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+  applyTheme(saved || (sys?'dark':'light'));
+})();
 
 /* ============ 資料模型 ============ */
 const DATA = {tasks:[], orders:[], uniforms:[], assets:[]};
@@ -394,13 +488,13 @@ function renderTasks(){
     `<div class="stat b"><div class="n">${pend}</div><div class="l">待處理</div></div>
      <div class="stat c"><div class="n">${total-pend}</div><div class="l">已處理</div></div>
      <div class="stat a"><div class="n">${total}</div><div class="l">總計</div></div>`;
-  t.innerHTML=`<thead><tr><th>交代日期</th><th>交代人</th><th>要處理的事</th><th>狀態</th><th>備註</th><th></th></tr></thead><tbody>`+
+  t.innerHTML=`<thead><tr><th>要處理的事</th><th>交代人</th><th>交代日期</th><th>狀態</th><th>備註</th><th></th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>`<tr class="${r.done?'done':''}">
-      <td>${esc(fmtDate(r.assign_date))}</td>
-      <td>${esc(r.assigned_by)}</td>
       <td class="maincol">${esc(r.content)}</td>
-      <td><button class="pill ${r.done?'yes':'no'}" onclick="toggle('tasks','${r.id}','done',${!r.done})">${r.done?'✓ 已處理':'待處理'}</button></td>
-      <td>${esc(r.notes)||'<span style=color:#cbd5e1>—</span>'}</td>
+      <td data-label="交代人">${esc(r.assigned_by)}</td>
+      <td data-label="交代日期">${esc(fmtDate(r.assign_date))}</td>
+      <td data-label="狀態"><button class="pill ${r.done?'yes':'no'}" onclick="toggle('tasks','${r.id}','done',${!r.done})">${r.done?'✓ 已處理':'待處理'}</button></td>
+      <td data-label="備註">${esc(r.notes)||'<span class="dash">—</span>'}</td>
       <td class="act"><button class="iconbtn" onclick="openForm('tasks','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('tasks','${r.id}')">🗑️</button></td>
     </tr>`).join(''):emptyRow(6,'目前沒有資料'))+`</tbody>`;
 }
@@ -418,14 +512,14 @@ function renderOrders(){
      <div class="stat c"><div class="n">${base.length-pend}</div><div class="l">已到貨</div></div>
      <div class="stat a"><div class="n">${base.length}</div><div class="l">${(mon&&mon!=='all')?'本月筆數':'總筆數'}</div></div>`;
   const t=document.getElementById('tbOrders');
-  t.innerHTML=`<thead><tr><th>訂貨日期</th><th>品名</th><th>數量</th><th>廠商</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`+
+  t.innerHTML=`<thead><tr><th>品名</th><th>訂貨日期</th><th>數量</th><th>廠商</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>`<tr class="${r.arrived?'done':''}">
-      <td>${esc(fmtDate(r.order_date))}</td>
       <td class="maincol">${esc(r.item)}</td>
-      <td class="qty">${r.quantity!=null?esc(r.quantity):'—'}</td>
-      <td>${esc(r.supplier)||'—'}</td>
-      <td><button class="pill ${r.arrived?'yes':'no'}" onclick="toggle('orders','${r.id}','arrived',${!r.arrived})">${r.arrived?'✓ 已到貨':'未到貨'}</button></td>
-      <td>${esc(r.notes)||'<span style=color:#cbd5e1>—</span>'}</td>
+      <td data-label="訂貨日期">${esc(fmtDate(r.order_date))}</td>
+      <td class="qty" data-label="數量">${r.quantity!=null?esc(r.quantity):'<span class="dash">—</span>'}</td>
+      <td data-label="廠商">${esc(r.supplier)||'<span class="dash">—</span>'}</td>
+      <td data-label="到貨"><button class="pill ${r.arrived?'yes':'no'}" onclick="toggle('orders','${r.id}','arrived',${!r.arrived})">${r.arrived?'✓ 已到貨':'未到貨'}</button></td>
+      <td data-label="備註">${esc(r.notes)||'<span class="dash">—</span>'}</td>
       <td class="act"><button class="iconbtn" onclick="openForm('orders','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('orders','${r.id}')">🗑️</button></td>
     </tr>`).join(''):emptyRow(7,'這個月還沒有訂貨紀錄'))+`</tbody>`;
 }
@@ -444,15 +538,15 @@ function renderUniforms(){
      <div class="stat c"><div class="n">${base.length-pend}</div><div class="l">已到貨筆</div></div>
      <div class="stat a"><div class="n">${pcs}</div><div class="l">總件數</div></div>`;
   const t=document.getElementById('tbUniforms');
-  t.innerHTML=`<thead><tr><th>申請日期</th><th>員工</th><th>品項</th><th>尺寸</th><th>件數</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`+
+  t.innerHTML=`<thead><tr><th>員工</th><th>申請日期</th><th>品項</th><th>尺寸</th><th>件數</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>`<tr class="${r.arrived?'done':''}">
-      <td>${esc(fmtDate(r.apply_date))}</td>
       <td class="maincol">${esc(r.employee)}</td>
-      <td>${esc(r.item_type)}</td>
-      <td><span class="tag">${esc(r.size)||'—'}</span></td>
-      <td class="qty">${esc(r.quantity)}</td>
-      <td><button class="pill ${r.arrived?'yes':'no'}" onclick="toggle('uniforms','${r.id}','arrived',${!r.arrived})">${r.arrived?'✓ 已到貨':'未到貨'}</button></td>
-      <td>${esc(r.notes)||'<span style=color:#cbd5e1>—</span>'}</td>
+      <td data-label="申請日期">${esc(fmtDate(r.apply_date))}</td>
+      <td data-label="品項">${esc(r.item_type)}</td>
+      <td data-label="尺寸"><span class="tag">${esc(r.size)||'—'}</span></td>
+      <td class="qty" data-label="件數">${esc(r.quantity)}</td>
+      <td data-label="到貨"><button class="pill ${r.arrived?'yes':'no'}" onclick="toggle('uniforms','${r.id}','arrived',${!r.arrived})">${r.arrived?'✓ 已到貨':'未到貨'}</button></td>
+      <td data-label="備註">${esc(r.notes)||'<span class="dash">—</span>'}</td>
       <td class="act"><button class="iconbtn" onclick="openForm('uniforms','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('uniforms','${r.id}')">🗑️</button></td>
     </tr>`).join(''):emptyRow(8,'這個月還沒有制服申請'))+`</tbody>`;
 }
@@ -473,13 +567,13 @@ function renderAssets(){
   const t=document.getElementById('tbAssets');
   t.innerHTML=`<thead><tr><th>使用單位</th><th>類別</th><th>機號</th><th>資產編號</th><th>使用部門</th><th>保管人</th><th>備註</th><th></th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>`<tr>
-      <td><span class="tag">${esc(r.unit)||'—'}</span></td>
-      <td>${esc(r.category)||'—'}</td>
-      <td class="maincol">${esc(r.machine_no)||'—'}</td>
-      <td>${esc(r.asset_no)||'—'}</td>
-      <td>${esc(r.department)||'—'}</td>
-      <td>${r.keeper?esc(r.keeper):'<span style=color:#cbd5e1>未指定</span>'}</td>
-      <td>${r.status==='uninspected'?'<span class="tag warn">未盤點</span> ':''}${esc(r.notes)||''}</td>
+      <td data-label="使用單位"><span class="tag">${esc(r.unit)||'—'}</span></td>
+      <td data-label="類別">${esc(r.category)||'<span class="dash">—</span>'}</td>
+      <td data-label="機號">${esc(r.machine_no)||'<span class="dash">—</span>'}</td>
+      <td data-label="資產編號">${esc(r.asset_no)||'<span class="dash">—</span>'}</td>
+      <td data-label="使用部門">${esc(r.department)||'<span class="dash">—</span>'}</td>
+      <td data-label="保管人">${r.keeper?esc(r.keeper):'<span class="dash">未指定</span>'}</td>
+      <td data-label="備註">${r.status==='uninspected'?'<span class="tag warn">未盤點</span> ':''}${esc(r.notes)||(r.status==='uninspected'?'':'<span class="dash">—</span>')}</td>
       <td class="act"><button class="iconbtn" onclick="openForm('assets','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('assets','${r.id}')">🗑️</button></td>
     </tr>`).join(''):emptyRow(8,'沒有符合的資材'))+`</tbody>`;
 }
