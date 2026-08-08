@@ -206,7 +206,7 @@
       <button class="out icon" id="themeBtn" onclick="toggleTheme()" title="切換深／淺主題">🌙</button>
     </div>
     <nav id="nav">
-      <button data-tab="tasks" class="active" onclick="go('tasks')"><span class="ico">📌</span><span class="lbl">主管交代</span><span class="badge" id="bTasks">0</span></button>
+      <button data-tab="tasks" class="active" onclick="go('tasks')"><span class="ico">📌</span><span class="lbl">交代事項</span><span class="badge" id="bTasks">0</span></button>
       <button data-tab="orders" onclick="go('orders')"><span class="ico">📦</span><span class="lbl">訂貨追蹤</span><span class="badge" id="bOrders">0</span></button>
       <button data-tab="uniforms" onclick="go('uniforms')"><span class="ico">👕</span><span class="lbl">制服申請</span><span class="badge" id="bUniforms">0</span></button>
       <button data-tab="assets" onclick="go('assets')"><span class="ico">🏷️</span><span class="lbl">資材保管</span><span class="badge" id="bAssets">0</span></button>
@@ -334,7 +334,7 @@ const byUnitOrder = (a,b) => unitRank(a.unit)-unitRank(b.unit)
 
 /* 各模組欄位定義（給表單用） */
 const SCHEMA = {
-  tasks:{ table:'mgr_tasks', title:'主管交代', order:['assign_date','asc'], fields:[
+  tasks:{ table:'mgr_tasks', title:'交代事項', order:['assign_date','asc'], fields:[
     {k:'assigned_by',l:'交代人',t:'text',req:true,ph:'例：陳尚福'},
     {k:'assign_date',l:'交代日期',t:'date',req:true,def:'today'},
     {k:'content',l:'要處理的事',t:'textarea',req:true,ph:'交代內容'},
