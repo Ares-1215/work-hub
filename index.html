@@ -35,20 +35,6 @@
   button{font-family:inherit;cursor:pointer;border:0;background:none}
   input,select,textarea{font-family:inherit;font-size:15px}
 
-  /* ---------- Login ---------- */
-  #login{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#134e4a);
-    display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
-  .login-card{background:#fff;border-radius:18px;padding:34px 30px;width:100%;max-width:360px;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center}
-  .login-card h1{margin:0 0 6px;font-size:22px}
-  .login-card p{margin:0 0 22px;color:var(--sub);font-size:14px}
-  .login-card input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;
-    text-align:center;letter-spacing:2px;margin-bottom:14px}
-  .login-card input:focus{outline:none;border-color:var(--brand)}
-  .login-card button{width:100%;padding:13px;background:var(--brand);color:#fff;border-radius:10px;
-    font-size:16px;font-weight:600}
-  .login-err{color:var(--red);font-size:13px;min-height:18px;margin-top:4px}
-
   /* ---------- Header ---------- */
   header{background:var(--bg);color:#fff;position:sticky;top:0;z-index:40;box-shadow:0 2px 12px rgba(0,0,0,.2)}
   .hbar{display:flex;align-items:center;gap:10px;padding:12px 18px;max-width:1200px;margin:0 auto}
@@ -210,26 +196,14 @@
 </head>
 <body>
 
-<!-- ===== Login ===== -->
-<div id="login">
-  <div class="login-card">
-    <h1>🗂️ 工作管理後台</h1>
-    <p>彰化轉運中心 · 資訊專員</p>
-    <input id="pw" type="password" placeholder="請輸入通行碼" autocomplete="off">
-    <button onclick="doLogin()">進入</button>
-    <div class="login-err" id="loginErr"></div>
-  </div>
-</div>
-
 <!-- ===== App ===== -->
-<div id="app" style="display:none">
+<div id="app">
   <header>
     <div class="hbar">
       <div class="logo">🗂️ 工作管理<span>後台</span></div>
       <div class="sp"></div>
-      <div class="who" id="who">已登入</div>
+      <div class="who" id="who">線上同步中 ✓</div>
       <button class="out icon" id="themeBtn" onclick="toggleTheme()" title="切換深／淺主題">🌙</button>
-      <button class="out" onclick="logout()">登出</button>
     </div>
     <nav id="nav">
       <button data-tab="tasks" class="active" onclick="go('tasks')"><span class="ico">📌</span><span class="lbl">主管交代</span><span class="badge" id="bTasks">0</span></button>
@@ -328,7 +302,6 @@
 /* ============ 設定 ============ */
 const SUPABASE_URL = "https://hmqnlovyzlvvnkqmfwtt.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtcW5sb3Z5emx2dm5rcW1md3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjgxMTAsImV4cCI6MjEwMDU0NDExMH0.epqZ-DZsthezuTjfFGEhosR3hU3v8FgR4w0xnYOHN6s";
-const PASSCODE = "8036";          // ← 通行碼，可自行修改
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ============ 深／淺主題 ============ */
@@ -393,25 +366,8 @@ const SCHEMA = {
   ]},
 };
 
-/* ============ 登入 ============ */
-function doLogin(){
-  const v = document.getElementById('pw').value.trim();
-  if(v === PASSCODE){
-    sessionStorage.setItem('mgr_auth','1');
-    showApp();
-  }else{
-    document.getElementById('loginErr').textContent = '通行碼錯誤';
-  }
-}
-document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-function logout(){ sessionStorage.removeItem('mgr_auth'); location.reload(); }
-function showApp(){
-  document.getElementById('login').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('who').textContent = '線上同步中 ✓';
-  loadAll();
-}
-if(sessionStorage.getItem('mgr_auth')==='1') showApp();
+/* ============ 啟動（免登入，直接進入） ============ */
+loadAll();
 
 /* ============ 讀取 ============ */
 async function loadAll(){ await Promise.all([load('tasks'),load('orders'),load('uniforms'),load('assets')]); }
