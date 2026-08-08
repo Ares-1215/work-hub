@@ -327,6 +327,23 @@ const SUPABASE_URL = "https://hmqnlovyzlvvnkqmfwtt.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtcW5sb3Z5emx2dm5rcW1md3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjgxMTAsImV4cCI6MjEwMDU0NDExMH0.epqZ-DZsthezuTjfFGEhosR3hU3v8FgR4w0xnYOHN6s";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/* ============ 寫入重試（手機網路瞬斷時自動再試） ============ */
+async function dbWrite(op){
+  let lastErr;
+  for(let i=0;i<3;i++){
+    try{ const res=await op(); if(!res||!res.error) return res||{}; lastErr=res.error; }
+    catch(e){ lastErr=e; }
+    if(i<2){ toast('連線不穩，重試中…'); await new Promise(r=>setTimeout(r,700*(i+1))); }
+  }
+  return {error:lastErr};
+}
+function errMsg(e){
+  const m=(e&&e.message)||String(e||'');
+  return /failed to fetch|networkerror|load failed|fetch/i.test(m)
+    ? '網路連線不穩，資料未送出；請確認網路（避免用 LINE/FB 內建瀏覽器）後再存一次'
+    : m;
+}
+
 /* ============ 深／淺主題 ============ */
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
@@ -605,8 +622,8 @@ function renderAssets(){
 
 /* ============ 切換狀態 ============ */
 async function toggle(m,id,field,val){
-  const {error}=await sb.from(SCHEMA[m].table).update({[field]:val}).eq('id',id);
-  if(error){toast('更新失敗：'+error.message);return;}
+  const {error}=await dbWrite(()=>sb.from(SCHEMA[m].table).update({[field]:val}).eq('id',id));
+  if(error){toast('更新失敗：'+errMsg(error));return;}
   const r=DATA[m].find(x=>x.id===id); if(r)r[field]=val;
   render(m); updateBadges(); toast(val?'已標記完成 ✓':'已改回未完成');
 }
@@ -660,11 +677,11 @@ async function saveForm(){
   }
   if(m==='orders') obj.total_price=(obj.quantity!=null&&obj.unit_price!=null)?obj.quantity*obj.unit_price:null;
   const btn=document.getElementById('mSave');btn.disabled=true;btn.textContent='儲存中…';
-  let error;
-  if(id){({error}=await sb.from(s.table).update(obj).eq('id',id));}
-  else{({error}=await sb.from(s.table).insert(obj));}
+  const {error}=id
+    ? await dbWrite(()=>sb.from(s.table).update(obj).eq('id',id))
+    : await dbWrite(()=>sb.from(s.table).insert(obj));
   btn.disabled=false;btn.textContent='儲存';
-  if(error){toast('儲存失敗：'+error.message);return;}
+  if(error){toast('儲存失敗：'+errMsg(error));return;}
   closeModal();await load(m);toast(id?'已更新 ✓':'已新增 ✓');
 }
 
@@ -732,17 +749,17 @@ async function saveOrderMulti(){
   });
   if(!items.length){toast('請至少填一筆品項（品名必填）');return;}
   const btn=document.getElementById('mSave');btn.disabled=true;btn.textContent='儲存中…';
-  const {error}=await sb.from('mgr_orders').insert(items);
+  const {error}=await dbWrite(()=>sb.from('mgr_orders').insert(items));
   btn.disabled=false;btn.textContent='儲存';
-  if(error){toast('儲存失敗：'+error.message);return;}
+  if(error){toast('儲存失敗：'+errMsg(error));return;}
   closeModal();await load('orders');toast(`已新增 ${items.length} 筆品項 ✓`);
 }
 
 /* ============ 刪除 ============ */
 async function del(m,id){
   if(!confirm('確定要刪除這筆資料嗎？'))return;
-  const {error}=await sb.from(SCHEMA[m].table).delete().eq('id',id);
-  if(error){toast('刪除失敗：'+error.message);return;}
+  const {error}=await dbWrite(()=>sb.from(SCHEMA[m].table).delete().eq('id',id));
+  if(error){toast('刪除失敗：'+errMsg(error));return;}
   await load(m);toast('已刪除');
 }
 
