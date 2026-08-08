@@ -109,6 +109,29 @@
   .stat .l{font-size:12px;color:var(--sub);margin-top:2px}
   .stat.a .n{color:var(--brand)} .stat.b .n{color:var(--amber)} .stat.c .n{color:var(--green)}
 
+  /* 訂貨分組表頭 */
+  tr.grouphdr td{background:var(--card2);border-bottom:2px solid var(--brand);padding:10px 15px}
+  .ghd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+  .gno{font-weight:800;font-size:15px}
+  .gmeta{color:var(--sub);font-size:13px}
+  .gsub{margin-left:auto;font-weight:700;color:var(--brand)}
+  .gprog{font-size:12px;font-weight:700;background:var(--amber-l);color:var(--amber);padding:2px 10px;border-radius:20px}
+  .gprog.done{background:var(--green-l);color:var(--green)}
+
+  /* 多品項輸入 */
+  .ohead,.oitem{display:grid;grid-template-columns:minmax(0,1fr) 58px 66px 62px 26px;gap:6px;align-items:center}
+  .ohead{font-size:11px;color:var(--sub);font-weight:700;padding:0 2px 2px}
+  .ohead span:nth-child(n+2){text-align:right}
+  .oitem{margin-bottom:6px}
+  .oitem input{padding:8px;border:1.5px solid var(--line);border-radius:8px;background:var(--input);color:var(--ink);width:100%;font-size:14px}
+  .oitem input.oi-qty,.oitem input.oi-price{text-align:right}
+  .oi-total{font-size:13px;font-weight:700;text-align:right;color:var(--ink)}
+  .oi-del{color:var(--muted);font-size:16px;padding:2px;text-align:center}
+  .oi-del:hover{color:var(--red)}
+  #oAdd{margin-top:2px}
+  .ototal{text-align:right;font-size:14px;padding-top:10px;margin-top:4px;border-top:1px dashed var(--line);color:var(--sub)}
+  .ototal b{color:var(--brand);font-size:19px;margin-left:6px}
+
   /* ---------- Modal ---------- */
   #modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;
     justify-content:center;z-index:60;padding:30px 16px;overflow-y:auto}
@@ -235,7 +258,7 @@
     <section class="view" id="v-orders">
       <div class="toolbar">
         <h2>📦 訂貨追蹤</h2>
-        <div class="desc">輸入訂的貨與日期，逐月追蹤；點狀態切換已到貨／未到貨。</div>
+        <div class="desc">依「原表單編號」分組；一張表單可含多筆品項，總價自動計算，每筆各自標記到貨。</div>
         <select class="filter" id="monOrders" onchange="render('orders')"></select>
         <div class="chips" id="fltOrders">
           <button class="chip on" data-f="all">全部</button>
@@ -352,11 +375,13 @@ const SCHEMA = {
     {k:'content',l:'要處理的事',t:'textarea',req:true,ph:'交代內容'},
     {k:'notes',l:'備註',t:'text'},
   ]},
-  orders:{ table:'mgr_orders', title:'訂貨', order:['order_date','desc'], fields:[
+  orders:{ table:'mgr_orders', title:'訂貨品項', order:['order_date','desc'], fields:[
+    {k:'form_no',l:'原表單編號',t:'text',req:true,ph:'例：A1120-001'},
     {k:'order_date',l:'訂貨日期',t:'date',req:true,def:'today'},
     {k:'item',l:'品名',t:'text',req:true,ph:'例：熱感應紙'},
     {k:'quantity',l:'數量',t:'number',row2:true},
-    {k:'supplier',l:'廠商',t:'text',row2:true},
+    {k:'unit_price',l:'單價',t:'number',row2:true},
+    {k:'po_no',l:'採購單號',t:'text'},
     {k:'notes',l:'備註',t:'text'},
   ]},
   uniforms:{ table:'mgr_uniforms', title:'制服申請', order:['apply_date','desc'], fields:[
@@ -467,29 +492,61 @@ function renderTasks(){
     </tr>`).join(''):emptyRow(6,'目前沒有資料'))+`</tbody>`;
 }
 
+const money=v=>v==null?'<span class="dash">—</span>':'$'+Number(v).toLocaleString();
 function renderOrders(){
-  let rows=DATA.orders.slice();
   const mon=document.getElementById('monOrders').value, f=FILTER.orders;
-  if(mon&&mon!=='all')rows=rows.filter(r=>(r.order_date||'').slice(0,7)===mon);
+  const base=(mon&&mon!=='all')?DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===mon):DATA.orders;
+  let rows=base.slice();
   if(f==='pending')rows=rows.filter(r=>!r.arrived);
   if(f==='done')rows=rows.filter(r=>r.arrived);
-  const base=(mon&&mon!=='all')?DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===mon):DATA.orders;
+
   const pend=base.filter(r=>!r.arrived).length;
+  const totalAmt=base.reduce((s,r)=>s+(Number(r.total_price)||0),0);
   document.getElementById('sumOrders').innerHTML=
-    `<div class="stat b"><div class="n">${pend}</div><div class="l">未到貨</div></div>
-     <div class="stat c"><div class="n">${base.length-pend}</div><div class="l">已到貨</div></div>
-     <div class="stat a"><div class="n">${base.length}</div><div class="l">${(mon&&mon!=='all')?'本月筆數':'總筆數'}</div></div>`;
+    `<div class="stat b"><div class="n">${pend}</div><div class="l">未到貨品項</div></div>
+     <div class="stat c"><div class="n">${base.length-pend}</div><div class="l">已到貨品項</div></div>
+     <div class="stat a"><div class="n">$${totalAmt.toLocaleString()}</div><div class="l">${(mon&&mon!=='all')?'本月總金額':'總金額'}</div></div>`;
+
+  /* 每張表單的完整資訊（不受狀態篩選影響，用於表頭統計） */
+  const formInfo=new Map();
+  base.forEach(r=>{
+    const k=r.form_no||'（未填編號）';
+    const g=formInfo.get(k)||{sub:0,total:0,arr:0,po:null,date:r.order_date};
+    g.sub+=Number(r.total_price)||0; g.total++; if(r.arrived)g.arr++;
+    if(!g.po&&r.po_no)g.po=r.po_no;
+    formInfo.set(k,g);
+  });
+
+  /* 依日期新→舊、同表單集中 */
+  rows.sort((a,b)=>String(b.order_date||'').localeCompare(String(a.order_date||''))
+    || String(a.form_no||'').localeCompare(String(b.form_no||''))
+    || String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  const groups=new Map();
+  rows.forEach(r=>{const k=r.form_no||'（未填編號）'; if(!groups.has(k))groups.set(k,[]); groups.get(k).push(r);});
+
   const t=document.getElementById('tbOrders');
-  t.innerHTML=`<thead><tr><th>品名</th><th>訂貨日期</th><th>數量</th><th>廠商</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`+
-    (rows.length?rows.map(r=>`<tr class="${r.arrived?'done':''}">
-      <td class="maincol">${esc(r.item)}</td>
-      <td data-label="訂貨日期">${esc(fmtDate(r.order_date))}</td>
-      <td class="qty" data-label="數量">${r.quantity!=null?esc(r.quantity):'<span class="dash">—</span>'}</td>
-      <td data-label="廠商">${esc(r.supplier)||'<span class="dash">—</span>'}</td>
-      <td data-label="到貨"><button class="pill ${r.arrived?'yes':'no'}" onclick="toggle('orders','${r.id}','arrived',${!r.arrived})">${r.arrived?'✓ 已到貨':'未到貨'}</button></td>
-      <td data-label="備註">${esc(r.notes)||'<span class="dash">—</span>'}</td>
-      <td class="act"><button class="iconbtn" onclick="openForm('orders','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('orders','${r.id}')">🗑️</button></td>
-    </tr>`).join(''):emptyRow(7,'這個月還沒有訂貨紀錄'))+`</tbody>`;
+  let html=`<thead><tr><th>品名</th><th>數量</th><th>單價</th><th>總價</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`;
+  if(!groups.size){ html+=emptyRow(7,'這個月還沒有訂貨紀錄'); }
+  for(const [k,items] of groups){
+    const g=formInfo.get(k)||{sub:0,total:items.length,arr:0,po:null,date:items[0].order_date};
+    html+=`<tr class="grouphdr"><td colspan="7"><div class="ghd">
+        <span class="gno">📋 ${esc(k)}</span>
+        <span class="gmeta">${esc(fmtDate(g.date))}</span>
+        ${g.po?`<span class="gmeta">採購單號 ${esc(g.po)}</span>`:''}
+        <span class="gsub">小計 $${g.sub.toLocaleString()}</span>
+        <span class="gprog ${g.arr===g.total?'done':''}">到貨 ${g.arr}/${g.total}</span>
+      </div></td></tr>`;
+    html+=items.map(r=>`<tr class="${r.arrived?'done':''}">
+        <td class="maincol">${esc(r.item)}</td>
+        <td class="qty" data-label="數量">${r.quantity!=null?esc(r.quantity):'<span class="dash">—</span>'}</td>
+        <td class="qty" data-label="單價">${money(r.unit_price)}</td>
+        <td class="qty" data-label="總價">${money(r.total_price)}</td>
+        <td data-label="到貨"><button class="pill ${r.arrived?'yes':'no'}" onclick="toggle('orders','${r.id}','arrived',${!r.arrived})">${r.arrived?'✓ 已到貨':'未到貨'}</button></td>
+        <td data-label="備註">${esc(r.notes)||'<span class="dash">—</span>'}</td>
+        <td class="act"><button class="iconbtn" onclick="openForm('orders','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('orders','${r.id}')">🗑️</button></td>
+      </tr>`).join('');
+  }
+  t.innerHTML=html+`</tbody>`;
 }
 
 function renderUniforms(){
@@ -557,9 +614,11 @@ async function toggle(m,id,field,val){
 /* ============ 新增 / 編輯 ============ */
 let editing={m:null,id:null};
 function openForm(m,id=null){
+  if(m==='orders' && !id) return openOrderForm();   // 新增訂貨→多品項表單
   editing={m,id};
   const s=SCHEMA[m];
   const rec=id?DATA[m].find(r=>r.id===id):{};
+  document.getElementById('mSave').onclick=saveForm;
   document.getElementById('mTitle').textContent=(id?'編輯':'新增')+s.title;
   const today=new Date().toISOString().slice(0,10);
   const fieldHtml=f=>{
@@ -599,6 +658,7 @@ async function saveForm(){
     if(v==='')v=null;
     obj[f.k]=v;
   }
+  if(m==='orders') obj.total_price=(obj.quantity!=null&&obj.unit_price!=null)?obj.quantity*obj.unit_price:null;
   const btn=document.getElementById('mSave');btn.disabled=true;btn.textContent='儲存中…';
   let error;
   if(id){({error}=await sb.from(s.table).update(obj).eq('id',id));}
@@ -606,6 +666,76 @@ async function saveForm(){
   btn.disabled=false;btn.textContent='儲存';
   if(error){toast('儲存失敗：'+error.message);return;}
   closeModal();await load(m);toast(id?'已更新 ✓':'已新增 ✓');
+}
+
+/* ============ 新增訂貨：一張表單多品項 ============ */
+let orderItemSeq=0;
+function openOrderForm(){
+  editing={m:'orders',id:null};
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('mTitle').textContent='新增訂貨（一張表單可多筆品項）';
+  document.getElementById('mBody').innerHTML=`
+    <div class="fld row2">
+      <div class="col"><label>訂貨日期 <span style="color:#dc2626">*</span></label><input id="oDate" type="date" value="${today}"></div>
+      <div class="col"><label>採購單號</label><input id="oPo" placeholder="選填"></div>
+    </div>
+    <div class="fld"><label>原表單編號 <span style="color:#dc2626">*</span></label><input id="oForm" placeholder="例：A1120-001"></div>
+    <div class="fld"><label>品項（可多筆，總價自動計算）</label>
+      <div class="ohead"><span>品名</span><span>數量</span><span>單價</span><span>總價</span><span></span></div>
+      <div id="oItems"></div>
+      <button class="btn ghost sm" type="button" id="oAdd">＋ 新增品項</button>
+    </div>
+    <div class="ototal">本單總金額：<b id="oTotal">$0</b></div>`;
+  orderItemSeq=0;
+  document.getElementById('oAdd').onclick=()=>orderAddItem();
+  orderAddItem(); orderAddItem();   // 預設 2 列
+  document.getElementById('mSave').onclick=saveOrderMulti;
+  document.getElementById('modal').classList.add('on');
+}
+function orderAddItem(){
+  const c=document.getElementById('oItems');
+  const d=document.createElement('div');
+  d.className='oitem'; d.dataset.i=orderItemSeq++;
+  d.innerHTML=`<input class="oi-name" placeholder="品名">
+    <input class="oi-qty" type="number" min="0" step="any" placeholder="數量">
+    <input class="oi-price" type="number" min="0" step="any" placeholder="單價">
+    <span class="oi-total">$0</span>
+    <button class="oi-del" type="button" title="移除">✕</button>`;
+  c.appendChild(d);
+  d.querySelector('.oi-del').onclick=()=>{d.remove();orderRecalc();};
+  d.querySelectorAll('.oi-qty,.oi-price').forEach(el=>el.addEventListener('input',orderRecalc));
+}
+function orderRecalc(){
+  let sum=0;
+  document.querySelectorAll('#oItems .oitem').forEach(d=>{
+    const q=Number(d.querySelector('.oi-qty').value)||0;
+    const p=Number(d.querySelector('.oi-price').value)||0;
+    const t=q*p; sum+=t;
+    d.querySelector('.oi-total').textContent='$'+t.toLocaleString();
+  });
+  document.getElementById('oTotal').textContent='$'+sum.toLocaleString();
+}
+async function saveOrderMulti(){
+  const date=document.getElementById('oDate').value;
+  const form=document.getElementById('oForm').value.trim();
+  const po=document.getElementById('oPo').value.trim()||null;
+  if(!date){toast('請選訂貨日期');return;}
+  if(!form){toast('請填原表單編號');return;}
+  const items=[];
+  document.querySelectorAll('#oItems .oitem').forEach(d=>{
+    const name=d.querySelector('.oi-name').value.trim();
+    if(!name)return;
+    const q=d.querySelector('.oi-qty').value, p=d.querySelector('.oi-price').value;
+    const qn=q===''?null:Number(q), pn=p===''?null:Number(p);
+    items.push({form_no:form,order_date:date,po_no:po,item:name,quantity:qn,unit_price:pn,
+      total_price:(qn!=null&&pn!=null)?qn*pn:null,arrived:false});
+  });
+  if(!items.length){toast('請至少填一筆品項（品名必填）');return;}
+  const btn=document.getElementById('mSave');btn.disabled=true;btn.textContent='儲存中…';
+  const {error}=await sb.from('mgr_orders').insert(items);
+  btn.disabled=false;btn.textContent='儲存';
+  if(error){toast('儲存失敗：'+error.message);return;}
+  closeModal();await load('orders');toast(`已新增 ${items.length} 筆品項 ✓`);
 }
 
 /* ============ 刪除 ============ */
