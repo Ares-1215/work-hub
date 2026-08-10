@@ -126,6 +126,19 @@
   .gsub{margin-left:auto;font-weight:700;color:var(--brand)}
   .gprog{font-size:12px;font-weight:700;background:var(--amber-l);color:var(--amber);padding:2px 10px;border-radius:20px}
   .gprog.done{background:var(--green-l);color:var(--green)}
+  .gbtn{font-size:12px;font-weight:600;color:var(--brand);border:1px solid var(--brand);border-radius:8px;padding:3px 9px;background:transparent}
+  .gbtn:hover{background:var(--brand);color:#fff}
+
+  /* 各單位當月小計一覽 */
+  .unitsum{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:16px}
+  .unitsum h3{margin:0 0 10px;font-size:14px;color:var(--sub);font-weight:700;display:flex;align-items:center;gap:8px}
+  .unitsum table{width:100%;min-width:0;border-collapse:collapse}
+  .unitsum th,.unitsum td{padding:8px 6px;border-bottom:1px solid var(--line);font-size:14px;text-align:right}
+  .unitsum th{font-size:12px;color:var(--sub);font-weight:700}
+  .unitsum th:first-child,.unitsum td:first-child{text-align:left}
+  .unitsum tr:last-child td{border-bottom:0}
+  .unitsum tr.tot td{font-weight:800;border-top:2px solid var(--line);color:var(--brand)}
+  .unitsum .money{font-variant-numeric:tabular-nums;font-weight:700}
 
   /* 多品項輸入（每筆兩列：品名 / 單位+數量+單價+總價） */
   .oitem{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;background:var(--card2)}
@@ -278,6 +291,7 @@
         <button class="btn" onclick="openForm('orders')">＋ 新增訂貨</button>
       </div>
       <div class="summary" id="sumOrders"></div>
+      <div id="unitSummary"></div>
       <div class="tablewrap"><div class="scroll"><table id="tbOrders"></table></div></div>
     </section>
 
@@ -531,6 +545,34 @@ function renderTasks(){
 }
 
 const money=v=>v==null?'<span class="dash">—</span>':'$'+Number(v).toLocaleString();
+let ordGroups=[];
+function renderUnitSummary(data, mon){
+  const box=document.getElementById('unitSummary');
+  if(!data.length){ box.innerHTML=''; return; }
+  const map=new Map();
+  data.forEach(r=>{
+    const k=r.unit||'（未指定）';
+    const g=map.get(k)||{amt:0,qty:0,items:0,pend:0};
+    g.amt+=Number(r.total_price)||0; g.qty+=Number(r.quantity)||0; g.items++; if(!r.arrived)g.pend++;
+    map.set(k,g);
+  });
+  const order=[...ORDER_UNITS,'（未指定）'];
+  const keys=[...map.keys()].sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b,'zh-Hant');});
+  const tot={amt:0,qty:0,items:0,pend:0};
+  keys.forEach(k=>{const g=map.get(k);tot.amt+=g.amt;tot.qty+=g.qty;tot.items+=g.items;tot.pend+=g.pend;});
+  const label=(mon&&mon!=='all')?mon.replace('-','年')+'月':'全部期間';
+  box.innerHTML=`<div class="unitsum">
+    <h3>📊 各單位小計一覽（${esc(label)}）</h3>
+    <table><thead><tr><th>單位</th><th>金額</th><th>數量</th><th>品項</th><th>未到貨</th></tr></thead><tbody>
+    ${keys.map(k=>{const g=map.get(k);return `<tr>
+      <td>${k==='（未指定）'?'<span class="dash">未指定</span>':unitTag(k)}</td>
+      <td class="money">$${g.amt.toLocaleString()}</td>
+      <td>${g.qty.toLocaleString()}</td>
+      <td>${g.items}</td>
+      <td>${g.pend?'<span class="tag warn">'+g.pend+'</span>':'0'}</td></tr>`;}).join('')}
+    <tr class="tot"><td>合計</td><td class="money">$${tot.amt.toLocaleString()}</td><td>${tot.qty.toLocaleString()}</td><td>${tot.items}</td><td>${tot.pend}</td></tr>
+    </tbody></table></div>`;
+}
 function renderOrders(){
   const mon=document.getElementById('monOrders').value, f=FILTER.orders;
   const unit=document.getElementById('unitOrders').value;
@@ -549,6 +591,9 @@ function renderOrders(){
     `<div class="stat a"><div class="n">$${totalAmt.toLocaleString()}</div><div class="l">${esc(scope)}總金額</div></div>
      <div class="stat c"><div class="n">${totalQty.toLocaleString()}</div><div class="l">總數量</div></div>
      <div class="stat b"><div class="n">${pend}</div><div class="l">未到貨品項</div></div>`;
+
+  /* 各單位當月小計一覽（依月份，不受單位下拉影響） */
+  renderUnitSummary((mon&&mon!=='all')?DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===mon):DATA.orders, mon);
 
   /* 每張表單的完整資訊（不受狀態篩選影響，用於表頭統計） */
   const formInfo=new Map();
@@ -570,14 +615,19 @@ function renderOrders(){
   const t=document.getElementById('tbOrders');
   let html=`<thead><tr><th>品名</th><th>單位</th><th>數量</th><th>單價</th><th>總價</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`;
   if(!groups.size){ html+=emptyRow(8,'這個月還沒有訂貨紀錄'); }
+  ordGroups=[]; let gi=0;
   for(const [k,items] of groups){
     const g=formInfo.get(k)||{sub:0,total:items.length,arr:0,po:null,date:items[0].order_date};
+    ordGroups.push({key:k, realForm:items[0].form_no??null, date:g.date, po:g.po});
+    const idx=gi++;
     html+=`<tr class="grouphdr"><td colspan="8"><div class="ghd">
         <span class="gno">📋 ${esc(k)}</span>
         <span class="gmeta">${esc(fmtDate(g.date))}</span>
         ${g.po?`<span class="gmeta">採購單號 ${esc(g.po)}</span>`:''}
         <span class="gsub">小計 $${g.sub.toLocaleString()}</span>
         <span class="gprog ${g.arr===g.total?'done':''}">到貨 ${g.arr}/${g.total}</span>
+        <button class="gbtn" onclick="addToForm(${idx})">＋品項</button>
+        <button class="gbtn" onclick="editFormHeader(${idx})">✏️改表單</button>
       </div></td></tr>`;
     html+=items.map(r=>`<tr class="${r.arrived?'done':''}">
         <td class="maincol">${esc(r.item)}</td>
@@ -717,16 +767,18 @@ async function saveForm(){
 
 /* ============ 新增訂貨：一張表單多品項 ============ */
 let orderItemSeq=0;
-function openOrderForm(){
+function openOrderForm(preset){
   editing={m:'orders',id:null};
   const today=new Date().toISOString().slice(0,10);
-  document.getElementById('mTitle').textContent='新增訂貨（一張表單可多筆品項）';
+  const p=preset||{};
+  const appending=!!(p.form_no);
+  document.getElementById('mTitle').textContent=appending?`新增品項到「${p.form_no}」`:'新增訂貨（一張表單可多筆品項）';
   document.getElementById('mBody').innerHTML=`
     <div class="fld row2">
-      <div class="col"><label>訂貨日期 <span style="color:#dc2626">*</span></label><input id="oDate" type="date" value="${today}"></div>
-      <div class="col"><label>採購單號</label><input id="oPo" placeholder="選填"></div>
+      <div class="col"><label>訂貨日期 <span style="color:#dc2626">*</span></label><input id="oDate" type="date" value="${esc(p.order_date||today)}"></div>
+      <div class="col"><label>採購單號</label><input id="oPo" placeholder="選填" value="${esc(p.po_no||'')}"></div>
     </div>
-    <div class="fld"><label>原表單編號 <span style="color:#dc2626">*</span></label><input id="oForm" placeholder="例：A1120-001"></div>
+    <div class="fld"><label>原表單編號 <span style="color:#dc2626">*</span></label><input id="oForm" placeholder="例：A1120-001" value="${esc(p.form_no||'')}"></div>
     <div class="fld"><label>品項（可多筆，每筆可選申請單位，總價自動計算）</label>
       <div id="oItems"></div>
       <button class="btn ghost sm" type="button" id="oAdd">＋ 新增品項</button>
@@ -734,9 +786,47 @@ function openOrderForm(){
     <div class="ototal">本單總金額：<b id="oTotal">$0</b></div>`;
   orderItemSeq=0;
   document.getElementById('oAdd').onclick=()=>orderAddItem();
-  orderAddItem(); orderAddItem();   // 預設 2 列
+  orderAddItem(); if(!appending) orderAddItem();   // 追加時預設 1 列，新單 2 列
   document.getElementById('mSave').onclick=saveOrderMulti;
   document.getElementById('modal').classList.add('on');
+}
+/* 在既有表單追加品項（帶入該表單編號/日期/採購單號） */
+function addToForm(i){
+  const g=ordGroups[i]; if(!g)return;
+  openOrderForm({form_no:g.realForm||'', order_date:g.date, po_no:g.po||''});
+}
+/* 修改整張表單資訊（套用到該表單所有品項） */
+function editFormHeader(i){
+  const g=ordGroups[i]; if(!g)return;
+  editing={m:'orders',id:null};
+  const cnt=DATA.orders.filter(r=>(r.form_no??null)===g.realForm).length;
+  document.getElementById('mTitle').textContent='修改表單資訊';
+  document.getElementById('mBody').innerHTML=`
+    <div class="fld"><label>原表單編號 <span style="color:#dc2626">*</span></label><input id="hForm" value="${esc(g.realForm||'')}"></div>
+    <div class="fld row2">
+      <div class="col"><label>訂貨日期 <span style="color:#dc2626">*</span></label><input id="hDate" type="date" value="${esc(g.date||'')}"></div>
+      <div class="col"><label>採購單號</label><input id="hPo" value="${esc(g.po||'')}"></div>
+    </div>
+    <div style="font-size:13px;color:var(--sub);background:var(--card2);padding:10px 12px;border-radius:9px">
+      ⚠️ 此表單目前有 <b>${cnt}</b> 筆品項，儲存後會<b>一起套用</b>新的編號／日期／採購單號。</div>`;
+  document.getElementById('mSave').onclick=()=>saveFormHeader(i);
+  document.getElementById('modal').classList.add('on');
+}
+async function saveFormHeader(i){
+  const g=ordGroups[i]; if(!g)return;
+  const nf=document.getElementById('hForm').value.trim();
+  const nd=document.getElementById('hDate').value;
+  const npo=document.getElementById('hPo').value.trim()||null;
+  if(!nf){toast('請填原表單編號');return;}
+  if(!nd){toast('請選訂貨日期');return;}
+  const btn=document.getElementById('mSave');btn.disabled=true;btn.textContent='儲存中…';
+  const {error}=await dbWrite(()=>{
+    let q=sb.from('mgr_orders').update({form_no:nf,order_date:nd,po_no:npo});
+    return g.realForm==null?q.is('form_no',null):q.eq('form_no',g.realForm);
+  });
+  btn.disabled=false;btn.textContent='儲存';
+  if(error){toast('儲存失敗：'+errMsg(error));return;}
+  closeModal();await load('orders');toast('已更新整張表單 ✓');
 }
 function orderAddItem(){
   const c=document.getElementById('oItems');
