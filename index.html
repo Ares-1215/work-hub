@@ -100,6 +100,15 @@
   .pill:hover{filter:brightness(.96)}
   .tag{display:inline-block;background:var(--card2);color:var(--sub);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
   .tag.warn{background:var(--amber-l);color:var(--amber)}
+  /* 單位色標：發送=淡紅 到著=淡黃 籠車=淡灰 低溫=淡藍 */
+  .tag.u-send{background:#fee2e2;color:#b91c1c}
+  .tag.u-arrive{background:#fef3c7;color:#a16207}
+  .tag.u-cage{background:#e5e7eb;color:#4b5563}
+  .tag.u-cold{background:#dbeafe;color:#1d4ed8}
+  :root[data-theme="dark"] .tag.u-send{background:#3a1a1a;color:#fca5a5}
+  :root[data-theme="dark"] .tag.u-arrive{background:#3a2f12;color:#fcd34d}
+  :root[data-theme="dark"] .tag.u-cage{background:#313c52;color:#cbd5e1}
+  :root[data-theme="dark"] .tag.u-cold{background:#17263f;color:#93c5fd}
   .qty{font-variant-numeric:tabular-nums;font-weight:600}
 
   /* summary strip */
@@ -118,16 +127,15 @@
   .gprog{font-size:12px;font-weight:700;background:var(--amber-l);color:var(--amber);padding:2px 10px;border-radius:20px}
   .gprog.done{background:var(--green-l);color:var(--green)}
 
-  /* 多品項輸入 */
-  .ohead,.oitem{display:grid;grid-template-columns:minmax(0,1fr) 58px 66px 62px 26px;gap:6px;align-items:center}
-  .ohead{font-size:11px;color:var(--sub);font-weight:700;padding:0 2px 2px}
-  .ohead span:nth-child(n+2){text-align:right}
-  .oitem{margin-bottom:6px}
-  .oitem input{padding:8px;border:1.5px solid var(--line);border-radius:8px;background:var(--input);color:var(--ink);width:100%;font-size:14px}
-  .oitem input.oi-qty,.oitem input.oi-price{text-align:right}
-  .oi-total{font-size:13px;font-weight:700;text-align:right;color:var(--ink)}
-  .oi-del{color:var(--muted);font-size:16px;padding:2px;text-align:center}
-  .oi-del:hover{color:var(--red)}
+  /* 多品項輸入（每筆兩列：品名 / 單位+數量+單價+總價） */
+  .oitem{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;background:var(--card2)}
+  .oi-r1{display:grid;grid-template-columns:1fr 32px;gap:6px;align-items:center;margin-bottom:6px}
+  .oi-r2{display:grid;grid-template-columns:minmax(0,1fr) 52px 62px auto;gap:6px;align-items:center}
+  .oitem input,.oitem select{padding:8px;border:1.5px solid var(--line);border-radius:8px;background:var(--input);color:var(--ink);width:100%;font-size:14px}
+  .oitem .oi-qty,.oitem .oi-price{text-align:right}
+  .oi-total{font-size:13px;font-weight:700;text-align:right;color:var(--ink);white-space:nowrap;min-width:56px}
+  .oi-del{color:var(--muted);font-size:15px;padding:7px 0;text-align:center;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+  .oi-del:hover{color:var(--red);border-color:var(--red)}
   #oAdd{margin-top:2px}
   .ototal{text-align:right;font-size:14px;padding-top:10px;margin-top:4px;border-top:1px dashed var(--line);color:var(--sub)}
   .ototal b{color:var(--brand);font-size:19px;margin-left:6px}
@@ -258,8 +266,9 @@
     <section class="view" id="v-orders">
       <div class="toolbar">
         <h2>📦 訂貨追蹤</h2>
-        <div class="desc">依「原表單編號」分組；一張表單可含多筆品項，總價自動計算，每筆各自標記到貨。</div>
+        <div class="desc">依「原表單編號」分組；每筆品項可標申請單位，方便控管各單位每月花費與數量。</div>
         <select class="filter" id="monOrders" onchange="render('orders')"></select>
+        <select class="filter" id="unitOrders" onchange="render('orders')"></select>
         <div class="chips" id="fltOrders">
           <button class="chip on" data-f="all">全部</button>
           <button class="chip" data-f="pending">未到貨</button>
@@ -396,6 +405,7 @@ const SCHEMA = {
     {k:'form_no',l:'原表單編號',t:'text',req:true,ph:'例：A1120-001'},
     {k:'order_date',l:'訂貨日期',t:'date',req:true,def:'today'},
     {k:'item',l:'品名',t:'text',req:true,ph:'例：熱感應紙'},
+    {k:'unit',l:'申請單位',t:'select',opts:['（未指定）','彰化發送','彰化到著','彰化籠車','彰化低溫','共用/其他']},
     {k:'quantity',l:'數量',t:'number',row2:true},
     {k:'unit_price',l:'單價',t:'number',row2:true},
     {k:'po_no',l:'採購單號',t:'text'},
@@ -430,7 +440,7 @@ async function load(m){
   const {data,error} = await sb.from(table).select('*').order(order[0],{ascending:order[1]==='asc'});
   if(error){ toast('讀取失敗：'+error.message); return; }
   DATA[m] = data||[];
-  if(m==='orders')   fillMonths('monOrders','order_date','orders');
+  if(m==='orders')  {fillMonths('monOrders','order_date','orders'); fillOrderUnits();}
   if(m==='uniforms') fillMonths('monUniforms','apply_date','uniforms');
   if(m==='assets')   fillUnits();
   render(m); updateBadges();
@@ -476,9 +486,20 @@ function fillUnits(){
   sel.innerHTML='<option value="all">全部單位</option>'+units.map(u=>`<option value="${u}">${u}</option>`).join('');
   if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
 }
+function fillOrderUnits(){
+  const sel=document.getElementById('unitOrders');
+  const present=new Set(DATA.orders.map(r=>r.unit).filter(Boolean));
+  const units=[...ORDER_UNITS.filter(u=>present.has(u)),...[...present].filter(u=>!ORDER_UNITS.includes(u))];
+  const cur=sel.value;
+  sel.innerHTML='<option value="all">全部單位</option>'+units.map(u=>`<option value="${u}">${u}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
 
 /* ============ 顯示 ============ */
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function unitClass(u){const s=u||'';return s.includes('發送')?'u-send':s.includes('到著')?'u-arrive':s.includes('籠車')?'u-cage':s.includes('低溫')?'u-cold':'';}
+function unitTag(u){return u?`<span class="tag ${unitClass(u)}">${esc(u)}</span>`:'<span class="dash">—</span>';}
+const ORDER_UNITS=['彰化發送','彰化到著','彰化籠車','彰化低溫','共用/其他'];
 const fmtDate=d=>d?d.slice(5).replace('-','/'):'';
 function statPill(done,doneTxt,noTxt){
   return done?`<span class="pill yes">✓ ${doneTxt}</span>`:`<span class="pill no">${noTxt}</span>`;
@@ -512,17 +533,22 @@ function renderTasks(){
 const money=v=>v==null?'<span class="dash">—</span>':'$'+Number(v).toLocaleString();
 function renderOrders(){
   const mon=document.getElementById('monOrders').value, f=FILTER.orders;
-  const base=(mon&&mon!=='all')?DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===mon):DATA.orders;
+  const unit=document.getElementById('unitOrders').value;
+  let base=DATA.orders;
+  if(mon&&mon!=='all')base=base.filter(r=>(r.order_date||'').slice(0,7)===mon);
+  if(unit&&unit!=='all')base=base.filter(r=>r.unit===unit);
   let rows=base.slice();
   if(f==='pending')rows=rows.filter(r=>!r.arrived);
   if(f==='done')rows=rows.filter(r=>r.arrived);
 
   const pend=base.filter(r=>!r.arrived).length;
   const totalAmt=base.reduce((s,r)=>s+(Number(r.total_price)||0),0);
+  const totalQty=base.reduce((s,r)=>s+(Number(r.quantity)||0),0);
+  const scope=(unit&&unit!=='all')?unit:((mon&&mon!=='all')?'本月':'全部');
   document.getElementById('sumOrders').innerHTML=
-    `<div class="stat b"><div class="n">${pend}</div><div class="l">未到貨品項</div></div>
-     <div class="stat c"><div class="n">${base.length-pend}</div><div class="l">已到貨品項</div></div>
-     <div class="stat a"><div class="n">$${totalAmt.toLocaleString()}</div><div class="l">${(mon&&mon!=='all')?'本月總金額':'總金額'}</div></div>`;
+    `<div class="stat a"><div class="n">$${totalAmt.toLocaleString()}</div><div class="l">${esc(scope)}總金額</div></div>
+     <div class="stat c"><div class="n">${totalQty.toLocaleString()}</div><div class="l">總數量</div></div>
+     <div class="stat b"><div class="n">${pend}</div><div class="l">未到貨品項</div></div>`;
 
   /* 每張表單的完整資訊（不受狀態篩選影響，用於表頭統計） */
   const formInfo=new Map();
@@ -542,11 +568,11 @@ function renderOrders(){
   rows.forEach(r=>{const k=r.form_no||'（未填編號）'; if(!groups.has(k))groups.set(k,[]); groups.get(k).push(r);});
 
   const t=document.getElementById('tbOrders');
-  let html=`<thead><tr><th>品名</th><th>數量</th><th>單價</th><th>總價</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`;
-  if(!groups.size){ html+=emptyRow(7,'這個月還沒有訂貨紀錄'); }
+  let html=`<thead><tr><th>品名</th><th>單位</th><th>數量</th><th>單價</th><th>總價</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`;
+  if(!groups.size){ html+=emptyRow(8,'這個月還沒有訂貨紀錄'); }
   for(const [k,items] of groups){
     const g=formInfo.get(k)||{sub:0,total:items.length,arr:0,po:null,date:items[0].order_date};
-    html+=`<tr class="grouphdr"><td colspan="7"><div class="ghd">
+    html+=`<tr class="grouphdr"><td colspan="8"><div class="ghd">
         <span class="gno">📋 ${esc(k)}</span>
         <span class="gmeta">${esc(fmtDate(g.date))}</span>
         ${g.po?`<span class="gmeta">採購單號 ${esc(g.po)}</span>`:''}
@@ -555,6 +581,7 @@ function renderOrders(){
       </div></td></tr>`;
     html+=items.map(r=>`<tr class="${r.arrived?'done':''}">
         <td class="maincol">${esc(r.item)}</td>
+        <td data-label="單位">${unitTag(r.unit)}</td>
         <td class="qty" data-label="數量">${r.quantity!=null?esc(r.quantity):'<span class="dash">—</span>'}</td>
         <td class="qty" data-label="單價">${money(r.unit_price)}</td>
         <td class="qty" data-label="總價">${money(r.total_price)}</td>
@@ -609,7 +636,7 @@ function renderAssets(){
   const t=document.getElementById('tbAssets');
   t.innerHTML=`<thead><tr><th>使用單位</th><th>類別</th><th>機號</th><th>資產編號</th><th>使用部門</th><th>保管人</th><th>備註</th><th></th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>`<tr>
-      <td data-label="使用單位"><span class="tag">${esc(r.unit)||'—'}</span></td>
+      <td data-label="使用單位">${unitTag(r.unit)}</td>
       <td data-label="類別">${esc(r.category)||'<span class="dash">—</span>'}</td>
       <td data-label="機號">${esc(r.machine_no)||'<span class="dash">—</span>'}</td>
       <td data-label="資產編號">${esc(r.asset_no)||'<span class="dash">—</span>'}</td>
@@ -675,7 +702,10 @@ async function saveForm(){
     if(v==='')v=null;
     obj[f.k]=v;
   }
-  if(m==='orders') obj.total_price=(obj.quantity!=null&&obj.unit_price!=null)?obj.quantity*obj.unit_price:null;
+  if(m==='orders'){
+    if(obj.unit==='（未指定）')obj.unit=null;
+    obj.total_price=(obj.quantity!=null&&obj.unit_price!=null)?obj.quantity*obj.unit_price:null;
+  }
   const btn=document.getElementById('mSave');btn.disabled=true;btn.textContent='儲存中…';
   const {error}=id
     ? await dbWrite(()=>sb.from(s.table).update(obj).eq('id',id))
@@ -697,8 +727,7 @@ function openOrderForm(){
       <div class="col"><label>採購單號</label><input id="oPo" placeholder="選填"></div>
     </div>
     <div class="fld"><label>原表單編號 <span style="color:#dc2626">*</span></label><input id="oForm" placeholder="例：A1120-001"></div>
-    <div class="fld"><label>品項（可多筆，總價自動計算）</label>
-      <div class="ohead"><span>品名</span><span>數量</span><span>單價</span><span>總價</span><span></span></div>
+    <div class="fld"><label>品項（可多筆，每筆可選申請單位，總價自動計算）</label>
       <div id="oItems"></div>
       <button class="btn ghost sm" type="button" id="oAdd">＋ 新增品項</button>
     </div>
@@ -713,11 +742,16 @@ function orderAddItem(){
   const c=document.getElementById('oItems');
   const d=document.createElement('div');
   d.className='oitem'; d.dataset.i=orderItemSeq++;
-  d.innerHTML=`<input class="oi-name" placeholder="品名">
-    <input class="oi-qty" type="number" min="0" step="any" placeholder="數量">
-    <input class="oi-price" type="number" min="0" step="any" placeholder="單價">
-    <span class="oi-total">$0</span>
-    <button class="oi-del" type="button" title="移除">✕</button>`;
+  d.innerHTML=`<div class="oi-r1">
+      <input class="oi-name" placeholder="品名">
+      <button class="oi-del" type="button" title="移除此品項">✕</button>
+    </div>
+    <div class="oi-r2">
+      <select class="oi-unit"><option value="">（選單位）</option>${ORDER_UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select>
+      <input class="oi-qty" type="number" min="0" step="any" placeholder="數量">
+      <input class="oi-price" type="number" min="0" step="any" placeholder="單價">
+      <span class="oi-total">$0</span>
+    </div>`;
   c.appendChild(d);
   d.querySelector('.oi-del').onclick=()=>{d.remove();orderRecalc();};
   d.querySelectorAll('.oi-qty,.oi-price').forEach(el=>el.addEventListener('input',orderRecalc));
@@ -744,7 +778,8 @@ async function saveOrderMulti(){
     if(!name)return;
     const q=d.querySelector('.oi-qty').value, p=d.querySelector('.oi-price').value;
     const qn=q===''?null:Number(q), pn=p===''?null:Number(p);
-    items.push({form_no:form,order_date:date,po_no:po,item:name,quantity:qn,unit_price:pn,
+    const u=d.querySelector('.oi-unit').value||null;
+    items.push({form_no:form,order_date:date,po_no:po,unit:u,item:name,quantity:qn,unit_price:pn,
       total_price:(qn!=null&&pn!=null)?qn*pn:null,arrived:false});
   });
   if(!items.length){toast('請至少填一筆品項（品名必填）');return;}
