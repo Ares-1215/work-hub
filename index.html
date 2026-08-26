@@ -142,7 +142,7 @@
   .hcard .hs{font-size:12px;color:var(--muted);margin-top:2px}
   .hcard.ok .hn{color:var(--green)} .hcard.warn .hn{color:var(--amber)}
   .hcard.bad .hn{color:var(--red)} .hcard.info .hn{color:var(--brand)}
-  .homepanels{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .homepanels{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
   .hpanel{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px 16px}
   .hpanel h3{margin:0 0 8px;font-size:14px;color:var(--sub);font-weight:700;display:flex;align-items:center;gap:6px}
   .hpanel .more{margin-left:auto;font-size:12px;color:var(--brand);font-weight:600;cursor:pointer}
@@ -153,6 +153,27 @@
   .hrow .hw{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hrow .hb{color:var(--sub);font-size:12px;white-space:nowrap}
   .hempty{color:var(--muted);font-size:13px;padding:14px 2px;text-align:center}
+
+  /* 訂貨月費用趨勢 */
+  .trend{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:16px}
+  .trend h3{margin:0 0 12px;font-size:14px;color:var(--sub);font-weight:700}
+  .tbars{display:flex;align-items:flex-end;gap:10px;height:110px}
+  .tcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;cursor:pointer}
+  .tbar{width:100%;max-width:52px;background:linear-gradient(180deg,var(--brand),var(--brand-d));border-radius:6px 6px 2px 2px;
+    min-height:3px;transition:filter .15s,transform .15s;transform-origin:bottom}
+  .tcol:hover .tbar{filter:brightness(1.12);transform:scaleY(1.02)}
+  .tcol.cur .tbar{outline:2px solid var(--brand);outline-offset:2px}
+  .tv{font-size:11px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tm{font-size:11px;color:var(--muted);white-space:nowrap}
+
+  /* 盤點模式 */
+  .invbar{background:var(--amber-l);border:1px solid var(--amber);border-radius:12px;padding:12px 14px;
+    margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px}
+  .invbar .msg{flex:1;min-width:200px;color:var(--ink)}
+  .invbar b{color:var(--amber)}
+  .invchk{border-radius:20px;padding:5px 14px;font-size:13px;font-weight:700;border:1.5px solid var(--line);
+    background:var(--card);color:var(--muted);white-space:nowrap}
+  .invchk.on{background:var(--green-l);color:var(--green);border-color:var(--green)}
 
   /* ---------- 全站搜尋 ---------- */
   #searchOv{position:fixed;inset:0;background:rgba(10,16,28,.6);backdrop-filter:blur(2px);
@@ -374,6 +395,7 @@
         <button class="btn" onclick="openForm('orders')">＋ 新增訂貨</button>
       </div>
       <div class="summary" id="sumOrders"></div>
+      <div id="ordTrend"></div>
       <div id="unitSummary"></div>
       <div class="tablewrap"><div class="scroll"><table id="tbOrders"></table></div></div>
     </section>
@@ -400,14 +422,24 @@
     <section class="view" id="v-assets">
       <div class="toolbar">
         <h2>🏷️ 各單位資材保管</h2>
-        <div class="desc">記錄各單位擁有的資材（機號／資產編號）與保管人。</div>
+        <div class="desc">記錄各單位擁有的資材（機號／條碼／資產編號）與保管人。</div>
+        <div class="chips" id="fltAssets">
+          <button class="chip on" data-f="all">全部</button>
+          <button class="chip" data-f="pdt">📟 PDT</button>
+          <button class="chip" data-f="radio">📻 對講機</button>
+          <button class="chip" data-f="scanner">🖨 條碼機</button>
+          <button class="chip" data-f="other">其他</button>
+        </div>
         <select class="filter" id="unitAssets" onchange="render('assets')"></select>
-        <input class="search" id="qAssets" placeholder="🔍 搜尋 機號/資產編號/保管人" oninput="render('assets')">
+        <select class="filter" id="catAssets" onchange="render('assets')"></select>
+        <input class="search" id="qAssets" placeholder="🔍 搜尋 機號/條碼/保管人" oninput="render('assets')">
         <div class="grow"></div>
+        <button class="btn ghost" id="invBtn" onclick="toggleInv()">📋 盤點模式</button>
         <button class="btn ghost" onclick="exportAssets()">⬇ 匯出 Excel</button>
         <button class="btn" onclick="openForm('assets')">＋ 新增資材</button>
       </div>
       <div class="summary" id="sumAssets"></div>
+      <div id="invBar"></div>
       <div class="tablewrap"><div class="scroll"><table id="tbAssets"></table></div></div>
     </section>
   </main>
@@ -479,7 +511,29 @@ function toggleTheme(){
 
 /* ============ 資料模型 ============ */
 const DATA = {tasks:[], orders:[], uniforms:[], assets:[]};
-const FILTER = {tasks:'pending', orders:'all', uniforms:'all'};
+const FILTER = {tasks:'pending', orders:'all', uniforms:'all', assets:'all'};
+
+/* 資材類別分組：pdt / radio對講機 / scanner條碼機 / other */
+function catGroup(c){
+  const s=c||'';
+  if(/PDT/i.test(s))return 'pdt';
+  if(s.includes('對講機'))return 'radio';
+  if(s.includes('條碼'))return 'scanner';
+  return 'other';
+}
+/* 逾期天數（未處理的交代） */
+function daysSince(d){
+  if(!d)return 0;
+  const t=new Date(); t.setHours(0,0,0,0);
+  return Math.floor((t-new Date(d+'T00:00:00'))/86400000);
+}
+function overdueTag(r){
+  if(r.done)return '';
+  const d=daysSince(r.assign_date);
+  if(d>=7)return ` <span class="tag st-repair">逾${d}天</span>`;
+  if(d>=3)return ` <span class="tag warn">逾${d}天</span>`;
+  return '';
+}
 
 /* 單位固定排序：發送 → 到著 → 籠車 → 低溫 → 設備工程師 → 尚未掛名（其餘排最後） */
 const UNIT_SEQ = ['發送','到著','籠車','低溫','設備工程','尚未掛名'];
@@ -559,7 +613,7 @@ async function load(m){
   DATA[m] = data||[];
   if(m==='orders')  {fillMonths('monOrders','order_date','orders'); fillOrderUnits();}
   if(m==='uniforms') fillMonths('monUniforms','apply_date','uniforms');
-  if(m==='assets')   fillUnits();
+  if(m==='assets')  {fillUnits(); fillCats();}
   render(m); updateBadges();
 }
 function updateBadges(){
@@ -602,14 +656,20 @@ function renderHome(){
       <span class="hs">${rep.length?'點擊查看明細':'狀態全部正常'}</span></button>`;
   const taskRows=pendT.slice(0,6).map(r=>
     `<div class="hrow" onclick="goHit('tasks','${r.id}')"><span class="hd">${esc(fmtDate(r.assign_date))}</span>
-     <span class="hw">${esc(r.content)}</span><span class="hb">${esc(r.assigned_by)}</span></div>`).join('');
+     <span class="hw">${esc(r.content)}${overdueTag(r)}</span><span class="hb">${esc(r.assigned_by)}</span></div>`).join('');
   const repRows=rep.slice(0,6).map(r=>
     `<div class="hrow" onclick="goHit('assets','${r.id}')"><span class="hd">${esc(r.unit||'')}</span>
      <span class="hw">${esc(r.category||'')} ${esc(r.barcode||r.machine_no||'')}</span>
      <span class="hb">${r.status==='repair'?'需報修':'送修中'}</span></div>`).join('');
+  const uniRows=pendU.slice(0,6).map(r=>
+    `<div class="hrow" onclick="goHit('uniforms','${r.id}')"><span class="hd">${esc(fmtDate(r.apply_date))}</span>
+     <span class="hw">${esc(r.employee)}・${esc(r.item_type||'')}</span>
+     <span class="hb">${esc(r.size||'')}×${esc(r.quantity||1)}</span></div>`).join('');
   document.getElementById('homePanels').innerHTML=`
     <div class="hpanel"><h3>📌 待處理交代 <span class="more" onclick="go('tasks')">全部 ›</span></h3>
       ${taskRows||'<div class="hempty">🎉 沒有待處理事項</div>'}</div>
+    <div class="hpanel"><h3>👕 制服未到貨 <span class="more" onclick="go('uniforms')">全部 ›</span></h3>
+      ${uniRows||'<div class="hempty">✅ 制服全部到貨</div>'}</div>
     <div class="hpanel"><h3>🔧 需報修／送修資材 <span class="more" onclick="go('assets')">全部 ›</span></h3>
       ${repRows||'<div class="hempty">✅ 沒有需報修的資材</div>'}</div>`;
 }
@@ -648,6 +708,15 @@ function fillUnits(){
   sel.innerHTML='<option value="all">全部單位</option>'+units.map(u=>`<option value="${u}">${u}</option>`).join('');
   if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
 }
+function fillCats(){
+  const sel=document.getElementById('catAssets');
+  const order={pdt:0,radio:1,scanner:2,other:3};
+  const cats=[...new Set(DATA.assets.map(r=>r.category).filter(Boolean))]
+    .sort((a,b)=>order[catGroup(a)]-order[catGroup(b)]||a.localeCompare(b,'zh-Hant'));
+  const cur=sel.value;
+  sel.innerHTML='<option value="all">全部類別</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
 function fillOrderUnits(){
   const sel=document.getElementById('unitOrders');
   const present=new Set(DATA.orders.map(r=>r.unit).filter(Boolean));
@@ -677,15 +746,17 @@ function renderTasks(){
   if(f==='done')rows=rows.filter(r=>r.done);
   const t=document.getElementById('tbTasks');
   const total=DATA.tasks.length,pend=DATA.tasks.filter(r=>!r.done).length;
+  const od=DATA.tasks.filter(r=>!r.done&&daysSince(r.assign_date)>=3).length;
   document.getElementById('sumTasks').innerHTML=
     `<div class="stat b"><div class="n">${pend}</div><div class="l">待處理</div></div>
+     <div class="stat"><div class="n" style="color:var(--red)">${od}</div><div class="l">逾期 ≥3 天</div></div>
      <div class="stat c"><div class="n">${total-pend}</div><div class="l">已處理</div></div>
      <div class="stat a"><div class="n">${total}</div><div class="l">總計</div></div>`;
   t.innerHTML=`<thead><tr><th>要處理的事</th><th>交代人</th><th>交代日期</th><th>狀態</th><th>備註</th><th></th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>`<tr class="${r.done?'done':''}" data-id="${r.id}">
       <td class="maincol">${esc(r.content)}</td>
       <td data-label="交代人">${esc(r.assigned_by)}</td>
-      <td data-label="交代日期">${esc(fmtDate(r.assign_date))}</td>
+      <td data-label="交代日期">${esc(fmtDate(r.assign_date))}${overdueTag(r)}</td>
       <td data-label="狀態"><button class="pill ${r.done?'yes':'no'}" onclick="toggle('tasks','${r.id}','done',${!r.done})">${r.done?'✓ 已處理':'待處理'}</button></td>
       <td data-label="備註">${esc(r.notes)||'<span class="dash">—</span>'}</td>
       <td class="act"><button class="iconbtn" onclick="openForm('tasks','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('tasks','${r.id}')">🗑️</button></td>
@@ -721,6 +792,32 @@ function renderUnitSummary(data, mon){
     <tr class="tot"><td>合計</td><td class="money">$${tot.amt.toLocaleString()}</td><td>${tot.qty.toLocaleString()}</td><td>${tot.items}</td><td>${tot.pend}</td></tr>
     </tbody></table></div>`;
 }
+/* 近 6 個月費用趨勢（點長條可切到該月） */
+function renderTrend(curMon){
+  const box=document.getElementById('ordTrend');
+  const now=new Date();
+  const months=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  const amt=months.map(m=>DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===m)
+    .reduce((s,r)=>s+(Number(r.total_price)||0),0));
+  if(!amt.some(v=>v>0)){box.innerHTML='';return;}
+  const max=Math.max(...amt);
+  const short=v=>v>=10000?(v/10000).toFixed(v>=100000?0:1)+'萬':v.toLocaleString();
+  box.innerHTML=`<div class="trend"><h3>📈 近 6 個月訂貨費用</h3><div class="tbars">
+    ${months.map((m,i)=>`<div class="tcol ${m===curMon?'cur':''}" onclick="pickMonth('${m}')" title="${m}：$${amt[i].toLocaleString()}">
+      <span class="tv">${amt[i]?'$'+short(amt[i]):''}</span>
+      <div class="tbar" style="height:${max?Math.max(3,Math.round(amt[i]/max*72)):3}px"></div>
+      <span class="tm">${Number(m.slice(5))}月</span></div>`).join('')}
+  </div></div>`;
+}
+function pickMonth(m){
+  const sel=document.getElementById('monOrders');
+  if([...sel.options].some(o=>o.value===m)){sel.value=m;render('orders');}
+  else toast(`${m.replace('-','年')}月沒有訂貨紀錄`);
+}
 function renderOrders(){
   const mon=document.getElementById('monOrders').value, f=FILTER.orders;
   const unit=document.getElementById('unitOrders').value;
@@ -742,6 +839,7 @@ function renderOrders(){
 
   /* 各單位當月小計一覽（依月份，不受單位下拉影響） */
   renderUnitSummary((mon&&mon!=='all')?DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===mon):DATA.orders, mon);
+  renderTrend(mon);
 
   /* 每張表單的完整資訊（不受狀態篩選影響，用於表頭統計） */
   const formInfo=new Map();
@@ -819,13 +917,25 @@ function renderUniforms(){
 }
 
 function renderAssets(){
-  let rows=DATA.assets.slice();
   const unit=document.getElementById('unitAssets').value;
+  const cat=document.getElementById('catAssets').value;
+  const grp=FILTER.assets;
   const q=document.getElementById('qAssets').value.trim().toLowerCase();
-  if(unit&&unit!=='all')rows=rows.filter(r=>r.unit===unit);
+  /* base＝單位篩選後（chips 數字用）；rows＝再套分組/類別/搜尋 */
+  const byUnit=(unit&&unit!=='all')?DATA.assets.filter(r=>r.unit===unit):DATA.assets.slice();
+  /* chips 顯示各分組數量 */
+  const cnt={all:byUnit.length,pdt:0,radio:0,scanner:0,other:0};
+  byUnit.forEach(r=>cnt[catGroup(r.category)]++);
+  const CHIP_LBL={all:'全部',pdt:'📟 PDT',radio:'📻 對講機',scanner:'🖨 條碼機',other:'其他'};
+  document.querySelectorAll('#fltAssets .chip').forEach(c=>{
+    const f=c.dataset.f; c.textContent=`${CHIP_LBL[f]} ${cnt[f]}`;
+  });
+  let rows=byUnit.slice();
+  if(grp!=='all')rows=rows.filter(r=>catGroup(r.category)===grp);
+  if(cat&&cat!=='all')rows=rows.filter(r=>r.category===cat);
+  const base=rows.slice();   // 統計對象＝目前檢視範圍
   if(q)rows=rows.filter(r=>[r.machine_no,r.barcode,r.asset_no,r.keeper,r.category,r.notes,r.unit].some(v=>(v||'').toLowerCase().includes(q)));
   rows.sort(byAssetOrder);
-  const base=(unit&&unit!=='all')?DATA.assets.filter(r=>r.unit===unit):DATA.assets;
   const un=base.filter(r=>r.status==='uninspected').length;
   const rep=base.filter(r=>r.status==='repair'||r.status==='repairing').length;
   document.getElementById('sumAssets').innerHTML=
@@ -833,19 +943,67 @@ function renderAssets(){
      <div class="stat c"><div class="n">${base.filter(r=>r.keeper).length}</div><div class="l">已指定保管</div></div>
      <div class="stat b"><div class="n">${un}</div><div class="l">未盤點</div></div>
      <div class="stat"><div class="n" style="color:var(--red)">${rep}</div><div class="l">需報修/送修</div></div>`;
+  /* 盤點模式提示列 */
+  const bar=document.getElementById('invBar');
+  if(invMode){
+    const inScope=rows.filter(r=>r.status!=='repair'&&r.status!=='repairing');
+    const done=inScope.filter(r=>invTouched.has(r.id)).length;
+    bar.innerHTML=`<div class="invbar"><span class="msg">📋 盤點中：逐台點〔☐ 未盤〕變〔✔ 已盤〕（<b>${done}</b>／${inScope.length}）。報修中的不列入。</span>
+      <button class="btn sm" onclick="finishInv(true)">結束並將未勾標為未盤點</button>
+      <button class="btn ghost sm" onclick="finishInv(false)">直接結束</button></div>`;
+  }else bar.innerHTML='';
   const t=document.getElementById('tbAssets');
   t.innerHTML=`<thead><tr><th>使用單位</th><th>類別</th><th>機號/型號</th><th>機身條碼</th><th>資產編號</th><th>保管人</th><th>狀態</th><th>備註</th><th></th></tr></thead><tbody>`+
-    (rows.length?rows.map(r=>`<tr data-id="${r.id}">
+    (rows.length?rows.map(r=>{
+      const canInv=invMode&&r.status!=='repair'&&r.status!=='repairing';
+      const stCell=canInv
+        ?`<button class="invchk ${invTouched.has(r.id)?'on':''}" onclick="invToggle('${r.id}')">${invTouched.has(r.id)?'✔ 已盤':'☐ 未盤'}</button>`
+        :statusTag(r.status);
+      return `<tr data-id="${r.id}">
       <td data-label="使用單位">${unitTag(r.unit)}</td>
       <td data-label="類別">${esc(r.category)||'<span class="dash">—</span>'}</td>
       <td data-label="機號/型號">${esc(r.machine_no)||'<span class="dash">—</span>'}</td>
       <td data-label="機身條碼">${esc(r.barcode)||'<span class="dash">—</span>'}</td>
       <td data-label="資產編號">${esc(r.asset_no)||'<span class="dash">—</span>'}</td>
       <td data-label="保管人">${r.keeper?esc(r.keeper):'<span class="dash">未指定</span>'}</td>
-      <td data-label="狀態">${statusTag(r.status)}</td>
+      <td data-label="狀態">${stCell}</td>
       <td data-label="備註">${esc(r.notes)||'<span class="dash">—</span>'}</td>
       <td class="act"><button class="iconbtn" onclick="openForm('assets','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('assets','${r.id}')">🗑️</button></td>
-    </tr>`).join(''):emptyRow(9,'沒有符合的資材'))+`</tbody>`;
+    </tr>`;}).join(''):emptyRow(9,'沒有符合的資材'))+`</tbody>`;
+}
+
+/* ============ 盤點模式 ============ */
+let invMode=false; const invTouched=new Set();
+function toggleInv(){
+  invMode=!invMode;
+  if(invMode)invTouched.clear();
+  document.getElementById('invBtn').textContent=invMode?'📋 盤點中…':'📋 盤點模式';
+  render('assets');
+}
+function invToggle(id){
+  if(invTouched.has(id))invTouched.delete(id);else invTouched.add(id);
+  render('assets');
+}
+async function finishInv(applyRest){
+  if(applyRest){
+    /* 目前檢視範圍內、非報修、未勾選 → 未盤點；已勾選 → 正常 */
+    const unit=document.getElementById('unitAssets').value;
+    const cat=document.getElementById('catAssets').value;
+    const grp=FILTER.assets;
+    let scope=DATA.assets.filter(r=>r.status!=='repair'&&r.status!=='repairing');
+    if(unit&&unit!=='all')scope=scope.filter(r=>r.unit===unit);
+    if(grp!=='all')scope=scope.filter(r=>catGroup(r.category)===grp);
+    if(cat&&cat!=='all')scope=scope.filter(r=>r.category===cat);
+    const okIds=scope.filter(r=>invTouched.has(r.id)).map(r=>r.id);
+    const noIds=scope.filter(r=>!invTouched.has(r.id)).map(r=>r.id);
+    if(!confirm(`確定結束盤點？\n✔ 已盤 ${okIds.length} 台 → 標「正常」\n☐ 未勾 ${noIds.length} 台 → 標「未盤點」`))return;
+    if(okIds.length){const {error}=await dbWrite(()=>sb.from('mgr_assets').update({status:'normal'}).in('id',okIds));if(error){toast('更新失敗：'+errMsg(error));return;}}
+    if(noIds.length){const {error}=await dbWrite(()=>sb.from('mgr_assets').update({status:'uninspected'}).in('id',noIds));if(error){toast('更新失敗：'+errMsg(error));return;}}
+    toast(`盤點完成：已盤 ${okIds.length}、未盤 ${noIds.length} ✓`);
+  }
+  invMode=false; invTouched.clear();
+  document.getElementById('invBtn').textContent='📋 盤點模式';
+  await load('assets');
 }
 
 /* ============ 切換狀態 ============ */
