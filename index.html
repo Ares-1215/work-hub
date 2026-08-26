@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="彰化轉運中心資訊專員工作管理後台：交代事項、訂貨追蹤、制服申請、資材保管">
 <title>工作管理後台 · 資訊專員</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0f172a; --card:#ffffff; --card2:#f8fafc; --line:#e2e8f0;
@@ -29,11 +34,15 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
-  body{font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
-    background:var(--page);color:var(--ink);font-size:15px;line-height:1.5;
+  body{font-family:"Noto Sans TC","Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+    background:var(--page);color:var(--ink);font-size:15px;line-height:1.55;
     transition:background .25s,color .25s}
   button{font-family:inherit;cursor:pointer;border:0;background:none}
   input,select,textarea{font-family:inherit;font-size:15px}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+  .btn,.chip,.pill,.iconbtn,.gbtn,.out{transition:background .18s,color .18s,border-color .18s,transform .12s,box-shadow .18s}
+  .btn:active,.chip:active,.pill:active,.gbtn:active{transform:scale(.96)}
+  .iconbtn:active{transform:scale(.9)}
 
   /* ---------- Header ---------- */
   header{background:var(--bg);color:#fff;position:sticky;top:0;z-index:40;box-shadow:0 2px 12px rgba(0,0,0,.2)}
@@ -59,9 +68,10 @@
 
   /* ---------- Layout ---------- */
   main{max-width:1200px;margin:0 auto;padding:20px 18px 80px}
-  .view{display:none}.view.active{display:block}
+  .view{display:none}.view.active{display:block;animation:viewin .28s ease}
+  @keyframes viewin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
-  .toolbar h2{margin:0;font-size:19px;flex-shrink:0}
+  .toolbar h2{margin:0;font-size:20px;font-weight:800;letter-spacing:-.2px;flex-shrink:0;text-wrap:balance}
   .toolbar .desc{color:var(--sub);font-size:13px;width:100%;margin:-6px 0 4px}
   .grow{flex:1}
   .btn{padding:9px 15px;background:var(--brand);color:#fff;border-radius:9px;font-weight:600;font-size:14px;
@@ -111,6 +121,57 @@
   :root[data-theme="dark"] .tag.u-cold{background:#17263f;color:#93c5fd}
   .qty{font-variant-numeric:tabular-nums;font-weight:600}
 
+  /* 狀態標籤（資材） */
+  .tag.st-repair{background:var(--red-l);color:var(--red)}
+  .tag.st-repairing{background:var(--amber-l);color:var(--amber)}
+  .tag.st-ok{background:var(--green-l);color:var(--green)}
+
+  /* ---------- 總覽儀表板 ---------- */
+  .hero{margin:2px 0 18px}
+  .hero h1{margin:0;font-size:25px;font-weight:900;letter-spacing:-.3px}
+  .hero p{margin:3px 0 0;color:var(--sub);font-size:14px}
+  .homegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .hcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;
+    box-shadow:var(--shadow);cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;
+    transition:transform .18s,box-shadow .18s,border-color .18s}
+  .hcard:hover{transform:translateY(-2px);border-color:var(--brand)}
+  .hcard:active{transform:scale(.98)}
+  .hcard .hi{font-size:20px;margin-bottom:4px}
+  .hcard .hn{font-size:27px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+  .hcard .hl{font-size:13px;color:var(--sub);font-weight:600}
+  .hcard .hs{font-size:12px;color:var(--muted);margin-top:2px}
+  .hcard.ok .hn{color:var(--green)} .hcard.warn .hn{color:var(--amber)}
+  .hcard.bad .hn{color:var(--red)} .hcard.info .hn{color:var(--brand)}
+  .homepanels{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .hpanel{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px 16px}
+  .hpanel h3{margin:0 0 8px;font-size:14px;color:var(--sub);font-weight:700;display:flex;align-items:center;gap:6px}
+  .hpanel .more{margin-left:auto;font-size:12px;color:var(--brand);font-weight:600;cursor:pointer}
+  .hrow{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer;border-radius:6px}
+  .hrow:hover{background:var(--hover)}
+  .hrow:last-child{border-bottom:0}
+  .hrow .hd{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .hrow .hw{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hrow .hb{color:var(--sub);font-size:12px;white-space:nowrap}
+  .hempty{color:var(--muted);font-size:13px;padding:14px 2px;text-align:center}
+
+  /* ---------- 全站搜尋 ---------- */
+  #searchOv{position:fixed;inset:0;background:rgba(10,16,28,.6);backdrop-filter:blur(2px);
+    display:none;z-index:70;padding:60px 16px 20px;overflow-y:auto}
+  #searchOv.on{display:flex;flex-direction:column;align-items:center;animation:ovin .18s ease}
+  .sbox{background:var(--card);border-radius:16px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.45);
+    overflow:hidden;animation:cardin .25s cubic-bezier(.32,.72,.28,1)}
+  .sbox .sin{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .sbox .sin input{flex:1;border:0;background:transparent;color:var(--ink);font-size:16px;outline:none}
+  .sbox .sin .x{font-size:20px;color:var(--muted);padding:0 4px}
+  .sres{max-height:60vh;overflow-y:auto;padding:6px}
+  .sgroup{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:1px;padding:10px 12px 4px}
+  .sr{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px}
+  .sr:hover{background:var(--hover)}
+  .sr .si{font-size:16px}
+  .sr .sm{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sr .ss{color:var(--sub);font-size:12px;white-space:nowrap}
+  tr.flash{outline:2px solid var(--brand);outline-offset:-2px}
+
   /* summary strip */
   .summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
   .stat{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:12px 18px;min-width:110px}
@@ -156,8 +217,11 @@
   /* ---------- Modal ---------- */
   #modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;
     justify-content:center;z-index:60;padding:30px 16px;overflow-y:auto}
-  #modal.on{display:flex}
-  .mcard{background:var(--card);border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  #modal.on{display:flex;animation:ovin .2s ease}
+  @keyframes ovin{from{opacity:0}}
+  .mcard{background:var(--card);border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.4);
+    animation:cardin .28s cubic-bezier(.32,.72,.28,1)}
+  @keyframes cardin{from{opacity:0;transform:translateY(24px) scale(.98)}to{opacity:1;transform:none}}
   .mhead{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center}
   .mhead h3{margin:0;font-size:18px}
   .mhead .x{margin-left:auto;font-size:22px;color:var(--muted);padding:0 6px}
@@ -199,10 +263,19 @@
     .chips{flex:1 1 100%}
     .chips .chip{flex:1;text-align:center}
 
-    /* 統計：三等分 */
+    /* 統計：自動 2~3 等分 */
     .summary{gap:8px}
-    .summary .stat{flex:1;min-width:0;padding:12px 8px;text-align:center}
-    .stat .n{font-size:21px}
+    .summary .stat{flex:1 1 30%;min-width:0;padding:12px 8px;text-align:center}
+    .stat .n{font-size:20px}
+
+    /* 總覽 */
+    .hero h1{font-size:21px}
+    .homegrid{grid-template-columns:1fr 1fr;gap:9px}
+    .hcard{padding:13px 13px 11px}
+    .hcard .hn{font-size:23px}
+    .homepanels{grid-template-columns:1fr}
+    nav button{font-size:10px}
+    #searchOv{padding:12px 10px}
 
     /* 表格 → 卡片 */
     .tablewrap{background:transparent;box-shadow:none;border-radius:0;overflow:visible}
@@ -247,10 +320,12 @@
       <div class="logo">🗂️ 工作管理<span>後台</span></div>
       <div class="sp"></div>
       <div class="who" id="who">線上同步中 ✓</div>
+      <button class="out icon" onclick="openSearch()" title="全站搜尋">🔍</button>
       <button class="out icon" id="themeBtn" onclick="toggleTheme()" title="切換深／淺主題">🌙</button>
     </div>
     <nav id="nav">
-      <button data-tab="tasks" class="active" onclick="go('tasks')"><span class="ico">📌</span><span class="lbl">交代事項</span><span class="badge" id="bTasks">0</span></button>
+      <button data-tab="home" class="active" onclick="go('home')"><span class="ico">🏠</span><span class="lbl">總覽</span></button>
+      <button data-tab="tasks" onclick="go('tasks')"><span class="ico">📌</span><span class="lbl">交代事項</span><span class="badge" id="bTasks">0</span></button>
       <button data-tab="orders" onclick="go('orders')"><span class="ico">📦</span><span class="lbl">訂貨追蹤</span><span class="badge" id="bOrders">0</span></button>
       <button data-tab="uniforms" onclick="go('uniforms')"><span class="ico">👕</span><span class="lbl">制服申請</span><span class="badge" id="bUniforms">0</span></button>
       <button data-tab="assets" onclick="go('assets')"><span class="ico">🏷️</span><span class="lbl">資材保管</span><span class="badge" id="bAssets">0</span></button>
@@ -258,8 +333,15 @@
   </header>
 
   <main>
+    <!-- ===== 0. 總覽 ===== -->
+    <section class="view active" id="v-home">
+      <div class="hero"><h1 id="heroTitle">你好 👋</h1><p id="heroSub">載入中…</p></div>
+      <div class="homegrid" id="homeGrid"></div>
+      <div class="homepanels" id="homePanels"></div>
+    </section>
+
     <!-- ===== 1. 主管交代 ===== -->
-    <section class="view active" id="v-tasks">
+    <section class="view" id="v-tasks">
       <div class="toolbar">
         <h2>📌 交代事項</h2>
         <div class="desc">記錄誰、哪天交代、要處理什麼；點狀態即可切換已處理／未處理。</div>
@@ -288,6 +370,7 @@
           <button class="chip" data-f="done">已到貨</button>
         </div>
         <div class="grow"></div>
+        <button class="btn ghost" onclick="exportOrders()">⬇ 匯出 Excel</button>
         <button class="btn" onclick="openForm('orders')">＋ 新增訂貨</button>
       </div>
       <div class="summary" id="sumOrders"></div>
@@ -321,6 +404,7 @@
         <select class="filter" id="unitAssets" onchange="render('assets')"></select>
         <input class="search" id="qAssets" placeholder="🔍 搜尋 機號/資產編號/保管人" oninput="render('assets')">
         <div class="grow"></div>
+        <button class="btn ghost" onclick="exportAssets()">⬇ 匯出 Excel</button>
         <button class="btn" onclick="openForm('assets')">＋ 新增資材</button>
       </div>
       <div class="summary" id="sumAssets"></div>
@@ -338,6 +422,15 @@
       <button class="btn ghost" onclick="closeModal()">取消</button>
       <button class="btn" id="mSave" onclick="saveForm()">儲存</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== 全站搜尋 ===== -->
+<div id="searchOv">
+  <div class="sbox">
+    <div class="sin">🔍<input id="sInput" placeholder="搜尋 交代／訂貨／制服／資材…" autocomplete="off">
+      <button class="x" onclick="closeSearch()">×</button></div>
+    <div class="sres" id="sRes"></div>
   </div>
 </div>
 
@@ -388,8 +481,15 @@ function toggleTheme(){
 const DATA = {tasks:[], orders:[], uniforms:[], assets:[]};
 const FILTER = {tasks:'pending', orders:'all', uniforms:'all'};
 
-/* 單位固定排序：發送 → 到著 → 籠車 → 低溫（其餘排最後） */
-const UNIT_SEQ = ['發送','到著','籠車','低溫'];
+/* 單位固定排序：發送 → 到著 → 籠車 → 低溫 → 設備工程師 → 尚未掛名（其餘排最後） */
+const UNIT_SEQ = ['發送','到著','籠車','低溫','設備工程','尚未掛名'];
+const STATUS_LABEL={normal:'正常',uninspected:'未盤點',repair:'需報修',repairing:'送修中'};
+function statusTag(s){
+  if(s==='repair')return '<span class="tag st-repair">需報修</span>';
+  if(s==='repairing')return '<span class="tag st-repairing">送修中</span>';
+  if(s==='uninspected')return '<span class="tag warn">未盤點</span>';
+  return '<span class="tag st-ok">正常</span>';
+}
 const unitRank = u => { const i = UNIT_SEQ.findIndex(k => (u||'').includes(k)); return i<0 ? 99 : i; };
 const byUnitOrder = (a,b) => unitRank(a.unit)-unitRank(b.unit)
   || String(a.unit||'').localeCompare(String(b.unit||''),'zh-Hant')
@@ -435,9 +535,12 @@ const SCHEMA = {
   ]},
   assets:{ table:'mgr_assets', title:'資材', order:['created_at','asc'], fields:[
     {k:'unit',l:'使用單位',t:'text',ph:'例：彰化發送'},
-    {k:'category',l:'資材類別',t:'text',ph:'例：7.6代 PDT'},
-    {k:'machine_no',l:'機號',t:'text',row2:true},
+    {k:'category',l:'資材類別',t:'text',ph:'例：7.6代 PDT／對講機'},
+    {k:'machine_no',l:'機號/型號',t:'text',row2:true,ph:'例：K200632'},
+    {k:'barcode',l:'機身條碼',t:'text',row2:true,ph:'例：5CAQ10310063'},
     {k:'asset_no',l:'資產編號',t:'text',row2:true},
+    {k:'status',l:'狀態',t:'select',row2:true,def:'normal',opts:[
+      {v:'normal',l:'正常'},{v:'uninspected',l:'未盤點'},{v:'repair',l:'需報修'},{v:'repairing',l:'送修中'}]},
     {k:'department',l:'目前使用部門',t:'text',ph:'例：8036 彰化轉運'},
     {k:'keeper',l:'保管人',t:'text'},
     {k:'notes',l:'備註',t:'text'},
@@ -464,6 +567,51 @@ function updateBadges(){
   document.getElementById('bOrders').textContent   = DATA.orders.filter(r=>!r.arrived).length;
   document.getElementById('bUniforms').textContent = DATA.uniforms.filter(r=>!r.arrived).length;
   document.getElementById('bAssets').textContent   = DATA.assets.length;
+  renderHome();
+}
+
+/* ============ 總覽儀表板 ============ */
+function renderHome(){
+  const now=new Date();
+  const wd=['日','一','二','三','四','五','六'][now.getDay()];
+  const hr=now.getHours();
+  const greet=hr<5?'夜深了':hr<11?'早安':hr<14?'午安':hr<18?'午後好':'晚上好';
+  document.getElementById('heroTitle').textContent=`${greet} 👋`;
+  const pendT=DATA.tasks.filter(r=>!r.done);
+  const pendO=DATA.orders.filter(r=>!r.arrived);
+  const pendU=DATA.uniforms.filter(r=>!r.arrived);
+  const rep=DATA.assets.filter(r=>r.status==='repair'||r.status==='repairing');
+  const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monAmt=DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===ym)
+    .reduce((s,r)=>s+(Number(r.total_price)||0),0);
+  document.getElementById('heroSub').textContent=
+    `${now.getMonth()+1}月${now.getDate()}日 星期${wd} ・ 本月訂貨 $${monAmt.toLocaleString()}`;
+  document.getElementById('homeGrid').innerHTML=`
+    <button class="hcard ${pendT.length?'warn':'ok'}" onclick="go('tasks')"><span class="hi">📌</span>
+      <span class="hn">${pendT.length}</span><span class="hl">待處理交代</span>
+      <span class="hs">${pendT.length?'最早 '+fmtDate(pendT[0].assign_date):'全部處理完畢'}</span></button>
+    <button class="hcard ${pendO.length?'warn':'ok'}" onclick="go('orders')"><span class="hi">📦</span>
+      <span class="hn">${pendO.length}</span><span class="hl">未到貨品項</span>
+      <span class="hs">本月訂貨 $${monAmt.toLocaleString()}</span></button>
+    <button class="hcard ${pendU.length?'warn':'ok'}" onclick="go('uniforms')"><span class="hi">👕</span>
+      <span class="hn">${pendU.length}</span><span class="hl">制服未到貨</span>
+      <span class="hs">共 ${DATA.uniforms.length} 筆申請</span></button>
+    <button class="hcard ${rep.length?'bad':'info'}" onclick="go('assets')"><span class="hi">🏷️</span>
+      <span class="hn">${rep.length?rep.length:DATA.assets.length}</span>
+      <span class="hl">${rep.length?'資材需報修':'資材總數'}</span>
+      <span class="hs">${rep.length?'點擊查看明細':'狀態全部正常'}</span></button>`;
+  const taskRows=pendT.slice(0,6).map(r=>
+    `<div class="hrow" onclick="goHit('tasks','${r.id}')"><span class="hd">${esc(fmtDate(r.assign_date))}</span>
+     <span class="hw">${esc(r.content)}</span><span class="hb">${esc(r.assigned_by)}</span></div>`).join('');
+  const repRows=rep.slice(0,6).map(r=>
+    `<div class="hrow" onclick="goHit('assets','${r.id}')"><span class="hd">${esc(r.unit||'')}</span>
+     <span class="hw">${esc(r.category||'')} ${esc(r.barcode||r.machine_no||'')}</span>
+     <span class="hb">${r.status==='repair'?'需報修':'送修中'}</span></div>`).join('');
+  document.getElementById('homePanels').innerHTML=`
+    <div class="hpanel"><h3>📌 待處理交代 <span class="more" onclick="go('tasks')">全部 ›</span></h3>
+      ${taskRows||'<div class="hempty">🎉 沒有待處理事項</div>'}</div>
+    <div class="hpanel"><h3>🔧 需報修／送修資材 <span class="more" onclick="go('assets')">全部 ›</span></h3>
+      ${repRows||'<div class="hempty">✅ 沒有需報修的資材</div>'}</div>`;
 }
 
 /* ============ 導覽 ============ */
@@ -534,7 +682,7 @@ function renderTasks(){
      <div class="stat c"><div class="n">${total-pend}</div><div class="l">已處理</div></div>
      <div class="stat a"><div class="n">${total}</div><div class="l">總計</div></div>`;
   t.innerHTML=`<thead><tr><th>要處理的事</th><th>交代人</th><th>交代日期</th><th>狀態</th><th>備註</th><th></th></tr></thead><tbody>`+
-    (rows.length?rows.map(r=>`<tr class="${r.done?'done':''}">
+    (rows.length?rows.map(r=>`<tr class="${r.done?'done':''}" data-id="${r.id}">
       <td class="maincol">${esc(r.content)}</td>
       <td data-label="交代人">${esc(r.assigned_by)}</td>
       <td data-label="交代日期">${esc(fmtDate(r.assign_date))}</td>
@@ -629,7 +777,7 @@ function renderOrders(){
         <button class="gbtn" onclick="addToForm(${idx})">＋品項</button>
         <button class="gbtn" onclick="editFormHeader(${idx})">✏️改表單</button>
       </div></td></tr>`;
-    html+=items.map(r=>`<tr class="${r.arrived?'done':''}">
+    html+=items.map(r=>`<tr class="${r.arrived?'done':''}" data-id="${r.id}">
         <td class="maincol">${esc(r.item)}</td>
         <td data-label="單位">${unitTag(r.unit)}</td>
         <td class="qty" data-label="數量">${r.quantity!=null?esc(r.quantity):'<span class="dash">—</span>'}</td>
@@ -658,7 +806,7 @@ function renderUniforms(){
      <div class="stat a"><div class="n">${pcs}</div><div class="l">總件數</div></div>`;
   const t=document.getElementById('tbUniforms');
   t.innerHTML=`<thead><tr><th>員工</th><th>申請日期</th><th>品項</th><th>尺寸</th><th>件數</th><th>到貨</th><th>備註</th><th></th></tr></thead><tbody>`+
-    (rows.length?rows.map(r=>`<tr class="${r.arrived?'done':''}">
+    (rows.length?rows.map(r=>`<tr class="${r.arrived?'done':''}" data-id="${r.id}">
       <td class="maincol">${esc(r.employee)}</td>
       <td data-label="申請日期">${esc(fmtDate(r.apply_date))}</td>
       <td data-label="品項">${esc(r.item_type)}</td>
@@ -675,26 +823,29 @@ function renderAssets(){
   const unit=document.getElementById('unitAssets').value;
   const q=document.getElementById('qAssets').value.trim().toLowerCase();
   if(unit&&unit!=='all')rows=rows.filter(r=>r.unit===unit);
-  if(q)rows=rows.filter(r=>[r.machine_no,r.asset_no,r.keeper,r.category,r.notes].some(v=>(v||'').toLowerCase().includes(q)));
+  if(q)rows=rows.filter(r=>[r.machine_no,r.barcode,r.asset_no,r.keeper,r.category,r.notes,r.unit].some(v=>(v||'').toLowerCase().includes(q)));
   rows.sort(byAssetOrder);
   const base=(unit&&unit!=='all')?DATA.assets.filter(r=>r.unit===unit):DATA.assets;
   const un=base.filter(r=>r.status==='uninspected').length;
+  const rep=base.filter(r=>r.status==='repair'||r.status==='repairing').length;
   document.getElementById('sumAssets').innerHTML=
     `<div class="stat a"><div class="n">${base.length}</div><div class="l">資材總數</div></div>
      <div class="stat c"><div class="n">${base.filter(r=>r.keeper).length}</div><div class="l">已指定保管</div></div>
-     <div class="stat b"><div class="n">${un}</div><div class="l">未盤點</div></div>`;
+     <div class="stat b"><div class="n">${un}</div><div class="l">未盤點</div></div>
+     <div class="stat"><div class="n" style="color:var(--red)">${rep}</div><div class="l">需報修/送修</div></div>`;
   const t=document.getElementById('tbAssets');
-  t.innerHTML=`<thead><tr><th>使用單位</th><th>類別</th><th>機號</th><th>資產編號</th><th>使用部門</th><th>保管人</th><th>備註</th><th></th></tr></thead><tbody>`+
-    (rows.length?rows.map(r=>`<tr>
+  t.innerHTML=`<thead><tr><th>使用單位</th><th>類別</th><th>機號/型號</th><th>機身條碼</th><th>資產編號</th><th>保管人</th><th>狀態</th><th>備註</th><th></th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>`<tr data-id="${r.id}">
       <td data-label="使用單位">${unitTag(r.unit)}</td>
       <td data-label="類別">${esc(r.category)||'<span class="dash">—</span>'}</td>
-      <td data-label="機號">${esc(r.machine_no)||'<span class="dash">—</span>'}</td>
+      <td data-label="機號/型號">${esc(r.machine_no)||'<span class="dash">—</span>'}</td>
+      <td data-label="機身條碼">${esc(r.barcode)||'<span class="dash">—</span>'}</td>
       <td data-label="資產編號">${esc(r.asset_no)||'<span class="dash">—</span>'}</td>
-      <td data-label="使用部門">${esc(r.department)||'<span class="dash">—</span>'}</td>
       <td data-label="保管人">${r.keeper?esc(r.keeper):'<span class="dash">未指定</span>'}</td>
-      <td data-label="備註">${r.status==='uninspected'?'<span class="tag warn">未盤點</span> ':''}${esc(r.notes)||(r.status==='uninspected'?'':'<span class="dash">—</span>')}</td>
+      <td data-label="狀態">${statusTag(r.status)}</td>
+      <td data-label="備註">${esc(r.notes)||'<span class="dash">—</span>'}</td>
       <td class="act"><button class="iconbtn" onclick="openForm('assets','${r.id}')">✏️</button><button class="iconbtn del" onclick="del('assets','${r.id}')">🗑️</button></td>
-    </tr>`).join(''):emptyRow(8,'沒有符合的資材'))+`</tbody>`;
+    </tr>`).join(''):emptyRow(9,'沒有符合的資材'))+`</tbody>`;
 }
 
 /* ============ 切換狀態 ============ */
@@ -720,7 +871,9 @@ function openForm(m,id=null){
     const id2='f_'+f.k;
     let ctl;
     if(f.t==='textarea')ctl=`<textarea id="${id2}" placeholder="${f.ph||''}">${esc(val)}</textarea>`;
-    else if(f.t==='select')ctl=`<select id="${id2}">${f.opts.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
+    else if(f.t==='select')ctl=`<select id="${id2}">${f.opts.map(o=>{
+      const v=(typeof o==='object')?o.v:o, l=(typeof o==='object')?o.l:o;
+      return `<option value="${esc(v)}" ${v===val?'selected':''}>${esc(l)}</option>`;}).join('')}</select>`;
     else ctl=`<input id="${id2}" type="${f.t}" placeholder="${f.ph||''}" value="${esc(val)}">`;
     const lab=`<label>${f.l}${f.req?' <span style=color:#dc2626>*</span>':''}</label>`;
     return {inner:lab+ctl};
@@ -886,6 +1039,97 @@ async function del(m,id){
   const {error}=await dbWrite(()=>sb.from(SCHEMA[m].table).delete().eq('id',id));
   if(error){toast('刪除失敗：'+errMsg(error));return;}
   await load(m);toast('已刪除');
+}
+
+/* ============ 全站搜尋 ============ */
+function openSearch(){
+  document.getElementById('searchOv').classList.add('on');
+  const i=document.getElementById('sInput'); i.value=''; doSearch(''); setTimeout(()=>i.focus(),60);
+}
+function closeSearch(){document.getElementById('searchOv').classList.remove('on');}
+document.getElementById('searchOv').addEventListener('click',e=>{if(e.target.id==='searchOv')closeSearch();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeSearch();
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();openSearch();}
+});
+document.getElementById('sInput').addEventListener('input',e=>doSearch(e.target.value));
+function doSearch(q){
+  q=q.trim().toLowerCase();
+  const box=document.getElementById('sRes');
+  if(!q){box.innerHTML='<div class="hempty">輸入關鍵字，一次搜尋四個模組（Ctrl+K 快速開啟）</div>';return;}
+  const hit=(r,keys)=>keys.some(k=>(r[k]||'').toString().toLowerCase().includes(q));
+  const G=[
+    {m:'tasks',ico:'📌',name:'交代事項',rows:DATA.tasks.filter(r=>hit(r,['content','assigned_by','notes'])),
+      main:r=>r.content,sub:r=>`${r.assigned_by}・${fmtDate(r.assign_date)}${r.done?'・已處理':''}`},
+    {m:'orders',ico:'📦',name:'訂貨追蹤',rows:DATA.orders.filter(r=>hit(r,['item','form_no','po_no','unit','notes'])),
+      main:r=>r.item,sub:r=>`${r.form_no||''}・${fmtDate(r.order_date)}${r.arrived?'・已到貨':'・未到貨'}`},
+    {m:'uniforms',ico:'👕',name:'制服申請',rows:DATA.uniforms.filter(r=>hit(r,['employee','item_type','size','notes'])),
+      main:r=>`${r.employee} ${r.item_type||''}`,sub:r=>`${r.size||''}×${r.quantity||1}・${fmtDate(r.apply_date)}`},
+    {m:'assets',ico:'🏷️',name:'資材保管',rows:DATA.assets.filter(r=>hit(r,['machine_no','barcode','asset_no','keeper','category','unit','notes'])),
+      main:r=>`${r.category||''} ${r.machine_no||''} ${r.barcode||''}`.trim(),sub:r=>`${r.unit||''}・${r.keeper||'未指定'}`},
+  ];
+  let html='',total=0;
+  for(const g of G){
+    if(!g.rows.length)continue;
+    total+=g.rows.length;
+    html+=`<div class="sgroup">${g.ico} ${g.name}（${g.rows.length}）</div>`;
+    html+=g.rows.slice(0,8).map(r=>`<div class="sr" onclick="goHit('${g.m}','${r.id}')">
+      <span class="si">${g.ico}</span><span class="sm">${esc(g.main(r))}</span><span class="ss">${esc(g.sub(r))}</span></div>`).join('');
+  }
+  box.innerHTML=html||'<div class="hempty">找不到符合「'+esc(q)+'」的資料</div>';
+}
+function goHit(m,id){
+  closeSearch(); go(m);
+  setTimeout(()=>{
+    const el=document.querySelector(`#v-${m} tr[data-id="${id}"]`);
+    if(el){el.scrollIntoView({block:'center',behavior:'smooth'});
+      el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),2500);}
+  },120);
+}
+
+/* ============ Excel 匯出（SheetJS 按需載入） ============ */
+let xlsxReady;
+function loadXLSX(){
+  return xlsxReady ??= new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload=res; s.onerror=()=>{xlsxReady=null;rej(new Error('Excel 元件載入失敗，請檢查網路'))};
+    document.head.appendChild(s);
+  });
+}
+async function exportOrders(){
+  try{await loadXLSX();}catch(e){toast(e.message);return;}
+  const mon=document.getElementById('monOrders').value;
+  const rows=(mon&&mon!=='all')?DATA.orders.filter(r=>(r.order_date||'').slice(0,7)===mon):DATA.orders.slice();
+  if(!rows.length){toast('沒有可匯出的資料');return;}
+  rows.sort((a,b)=>String(a.order_date||'').localeCompare(String(b.order_date||''))||String(a.form_no||'').localeCompare(String(b.form_no||'')));
+  const aoa=[['原表單編號','訂貨日期','採購單號','申請單位','品名','數量','單價','總價','到貨','備註'],
+    ...rows.map(r=>[r.form_no||'',r.order_date||'',r.po_no||'',r.unit||'',r.item||'',r.quantity??'',r.unit_price??'',r.total_price??'',r.arrived?'已到貨':'未到貨',r.notes||''])];
+  const um=new Map();
+  rows.forEach(r=>{const k=r.unit||'（未指定）';const g=um.get(k)||{amt:0,qty:0,n:0};
+    g.amt+=Number(r.total_price)||0;g.qty+=Number(r.quantity)||0;g.n++;um.set(k,g);});
+  const aoa2=[['單位','金額','數量','品項數'],...[...um.entries()].map(([k,g])=>[k,g.amt,g.qty,g.n]),
+    ['合計',rows.reduce((s,r)=>s+(Number(r.total_price)||0),0),rows.reduce((s,r)=>s+(Number(r.quantity)||0),0),rows.length]];
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:14},{wch:11},{wch:12},{wch:10},{wch:22},{wch:7},{wch:9},{wch:10},{wch:8},{wch:18}];
+  const ws2=XLSX.utils.aoa_to_sheet(aoa2); ws2['!cols']=[{wch:12},{wch:12},{wch:8},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'訂貨明細');
+  XLSX.utils.book_append_sheet(wb,ws2,'單位小計');
+  XLSX.writeFile(wb,`訂貨追蹤_${(mon&&mon!=='all')?mon:'全部'}.xlsx`);
+  toast('已匯出 Excel ✓');
+}
+async function exportAssets(){
+  try{await loadXLSX();}catch(e){toast(e.message);return;}
+  const rows=DATA.assets.slice().sort(byAssetOrder);
+  if(!rows.length){toast('沒有可匯出的資料');return;}
+  const aoa=[['使用單位','資材類別','機號/型號','機身條碼','資產編號','目前使用部門','保管人','狀態','備註'],
+    ...rows.map(r=>[r.unit||'',r.category||'',r.machine_no||'',r.barcode||'',r.asset_no||'',r.department||'',r.keeper||'',STATUS_LABEL[r.status]||'正常',r.notes||''])];
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:13},{wch:11},{wch:12},{wch:15},{wch:15},{wch:14},{wch:14},{wch:8},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'資材清單');
+  const d=new Date(),pad=n=>String(n).padStart(2,'0');
+  XLSX.writeFile(wb,`資材清單_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`);
+  toast('已匯出 Excel ✓');
 }
 
 /* ============ Toast ============ */
