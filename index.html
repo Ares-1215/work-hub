@@ -426,8 +426,8 @@
         <div class="chips" id="fltAssets">
           <button class="chip on" data-f="all">全部</button>
           <button class="chip" data-f="pdt">📟 PDT</button>
-          <button class="chip" data-f="radio">📻 對講機</button>
           <button class="chip" data-f="scanner">🖨 條碼機</button>
+          <button class="chip" data-f="radio">📻 對講機</button>
           <button class="chip" data-f="other">其他</button>
         </div>
         <select class="filter" id="unitAssets" onchange="render('assets')"></select>
@@ -549,15 +549,23 @@ const byUnitOrder = (a,b) => unitRank(a.unit)-unitRank(b.unit)
   || String(a.unit||'').localeCompare(String(b.unit||''),'zh-Hant')
   || String(a.created_at||'').localeCompare(String(b.created_at||''));
 
-/* 資材專用排序：單位優先，同單位內 → 陳尚福 → PDT → 有保管人 → 匯入順序 */
+/* 資材類別固定順序：7代 PDT → 7.6代 PDT → 腰掛式條碼機 → 對講機 → 其他 */
+const catRank = c => {
+  const s=c||'';
+  if(/7\.6/.test(s) && /PDT/i.test(s)) return 1;   // 7.6代 PDT
+  if(/PDT/i.test(s)) return 0;                      // 7代（及其他）PDT
+  if(s.includes('條碼')) return 2;                  // 腰掛式條碼機
+  if(s.includes('對講機')) return 3;                // 對講機
+  return 4;
+};
+/* 資材排序：單位 → 類別順序 → 陳尚福 → 有保管人 → 匯入順序 */
 const isChen   = r => (r.keeper||'').includes('陳尚福') ? 0 : 1;
-const isPDT    = r => /PDT/i.test(r.category||'') ? 0 : 1;
 const hasKeeper= r => (r.keeper||'').trim() ? 0 : 1;
 const byAssetOrder = (a,b) =>
      unitRank(a.unit)-unitRank(b.unit)                                   // 1. 單位固定順序
   || String(a.unit||'').localeCompare(String(b.unit||''),'zh-Hant')
-  || isChen(a)-isChen(b)                                                 // 2. 陳尚福優先
-  || isPDT(a)-isPDT(b)                                                   // 3. PDT 優先（勝過有無保管人）
+  || catRank(a.category)-catRank(b.category)                             // 2. 類別固定順序
+  || isChen(a)-isChen(b)                                                 // 3. 陳尚福優先
   || hasKeeper(a)-hasKeeper(b)                                           // 4. 有保管人優先
   || String(a.created_at||'').localeCompare(String(b.created_at||''));   // 5. 匯入順序
 
@@ -710,9 +718,8 @@ function fillUnits(){
 }
 function fillCats(){
   const sel=document.getElementById('catAssets');
-  const order={pdt:0,radio:1,scanner:2,other:3};
   const cats=[...new Set(DATA.assets.map(r=>r.category).filter(Boolean))]
-    .sort((a,b)=>order[catGroup(a)]-order[catGroup(b)]||a.localeCompare(b,'zh-Hant'));
+    .sort((a,b)=>catRank(a)-catRank(b)||a.localeCompare(b,'zh-Hant'));
   const cur=sel.value;
   sel.innerHTML='<option value="all">全部類別</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
